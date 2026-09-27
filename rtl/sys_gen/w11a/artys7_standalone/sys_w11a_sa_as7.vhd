@@ -2,8 +2,9 @@
 --
 -- Arty S7 w11a, standalone candidate: native RP07 on the microSD card in JD
 -- (write enabled) and the console DL11 (177560) as a native DL11 on the
--- 3.3 V serial cable in JC (9600 8N1).  rlink stays for debugging only
--- (loading the bootstrap); disk and console do not use it.
+-- 3.3 V serial cable in JC (9600 8N1).  The RP07 bootstrap is loaded and
+-- started by w11_autostart 2 s after configuration and on BTN3; rlink stays
+-- for debugging only.
 -- Derived from sys_w11a_sa_as7.
 --
 library ieee;
@@ -89,6 +90,11 @@ architecture syn of sys_w11a_sa_as7 is
   signal TXD :   slbit := '0';
 
   signal RB_MREQ        : rb_mreq_type := rb_mreq_init;
+  signal RB_MREQ_RL     : rb_mreq_type := rb_mreq_init;
+  signal RB_MREQ_AS     : rb_mreq_type := rb_mreq_init;
+  signal AS_ACTIVE      : slbit := '0';
+  signal AS_START       : slbit := '0';
+  signal BTN3_R         : slbit := '0';
   signal RB_SRES        : rb_sres_type := rb_sres_init;
   signal RB_SRES_CPU    : rb_sres_type := rb_sres_init;
   signal RB_SRES_SYSMON : rb_sres_type := rb_sres_init;
@@ -279,13 +285,37 @@ begin
       TXSD     => TXD,
       CTS_N    => '0',
       RTS_N    => open,
-      RB_MREQ  => RB_MREQ,
+      RB_MREQ  => RB_MREQ_RL,
       RB_SRES  => RB_SRES,
       RB_LAM   => RB_LAM,
       RB_STAT  => RB_STAT,
       RL_MONI  => open,
       SER_MONI => SER_MONI
     );
+
+  AUTOSTART : entity work.w11_autostart -- bootstrap without a PC ----------
+    generic map (
+      RB_BASE => x"0000",               -- cpu0 cp registers
+      DELAY   => 2000)
+    port map (
+      CLK     => CLK,
+      RESET   => GBL_RESET,
+      CE_MSEC => CE_MSEC,
+      START   => AS_START,
+      ACTIVE  => AS_ACTIVE,
+      RB_MREQ => RB_MREQ_AS,
+      RB_SRES => RB_SRES
+    );
+
+  proc_btn3: process (CLK)
+  begin
+    if rising_edge(CLK) then
+      BTN3_R <= BTN(3);
+    end if;
+  end process proc_btn3;
+
+  AS_START <= BTN(3) and not BTN3_R;
+  RB_MREQ <= RB_MREQ_AS when AS_ACTIVE = '1' else RB_MREQ_RL;
 
   PERFEXT(0) <= MIG_MONI.rdrhit;        -- ext_rdrhit
   PERFEXT(1) <= MIG_MONI.wrrhit;        -- ext_wrrhit
