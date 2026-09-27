@@ -1,0 +1,5 @@
+# libs
+../../../../vlib/slvtypes.vhd
+# design
+../w11_mem_arbiter.vhd
+tb_w11_mem_arbiter.vhd

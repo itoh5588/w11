@@ -1,0 +1,8 @@
+# rbus test access to the read-only SD card block layer
+../../../vlib/slvtypes.vhd
+../../../vlib/rbus/rblib.vhd
+../../../vlib/rbus/rb_sel.vbom
+sdspi_phy.vhd
+sdspi_ctl.vhd
+sd_dma_wr.vhd
+sdspi_rbus.vhd

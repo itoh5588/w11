@@ -1,0 +1,71 @@
+; SPDX-License-Identifier: GPL-3.0-or-later
+;
+; One RP07 READ through the native controller (sys_w11a_rp07_as7), driven
+; by the host (tcode/rp07_read.tcl): parameters at pdc..pwc, results at
+; rcs1..ras, flag = number of RH70 interrupts taken.  The transfer runs with
+; IE set and the program waits for the done interrupt (vector 254).
+;
+        rpcs1 = 176700
+        rpwc  = 176702
+        rpba  = 176704
+        rpda  = 176706
+        rpcs2 = 176710
+        rper1 = 176714
+        rpas  = 176716
+        rpdc  = 176734
+        rpbae = 176750
+
+        .asect
+        . = 254
+        .word   rpint, 340              ; RH70, handler at priority 7
+
+        . = 2000
+pdc:    .word   0                       ; parameters
+pda:    .word   0
+pba:    .word   0
+pbae:   .word   0
+pwc:    .word   0
+rcs1:   .word   0                       ; results
+rcs2:   .word   0
+rer1:   .word   0
+rwc:    .word   0
+rba:    .word   0
+rda:    .word   0
+rdc:    .word   0
+ras:    .word   0
+flag:   .word   0
+
+        . = 1000
+start:  mov     #1000,sp
+        clr     @#flag
+        clr     @#rpcs2                 ; unit 0
+        mov     @#pdc,@#rpdc
+        mov     @#pda,@#rpda
+        mov     @#pba,@#rpba
+        mov     @#pbae,@#rpbae
+        mov     @#pwc,@#rpwc
+        mov     @#pbae,r0               ; CS1 bits 9:8 are BAE bits 1:0,
+        swab    r0                      ; writing CS1 sets them too
+        bic     #176377,r0
+        bis     #171,r0                 ; IE + READ + GO
+        mov     r0,@#rpcs1
+        mov     #2000,r2                ; timeout: about 10 s
+1$:     clr     r1
+2$:     tst     @#flag
+        bne     3$
+        sob     r1,2$
+        sob     r2,1$
+3$:     mov     @#rpcs1,@#rcs1
+        mov     @#rpcs2,@#rcs2
+        mov     @#rper1,@#rer1
+        mov     @#rpwc,@#rwc
+        mov     @#rpba,@#rba
+        mov     @#rpda,@#rda
+        mov     @#rpdc,@#rdc
+        mov     @#rpas,@#ras
+        halt
+
+rpint:  inc     @#flag
+        rti
+
+        .end    start

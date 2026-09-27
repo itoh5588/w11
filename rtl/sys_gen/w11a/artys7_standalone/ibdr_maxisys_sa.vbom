@@ -1,0 +1,28 @@
+# libs
+../../../vlib/slvtypes.vhd
+../../../ibus/iblib.vhd
+../../../ibus/ibdlib.vhd
+${sys_conf := ../artys7/sys_conf.vhd}
+# components
+../../../ibus/ib_rlim_gen.vbom
+../../../ibus/ibd_iist.vbom
+../../../ibus/ibd_kw11l.vbom
+../../../ibus/ibd_kw11p.vbom
+../../../ibus/ibdr_deuna.vbom
+../../../ibus/ibdr_rl11.vbom
+../../../ibus/ibdr_rk11.vbom
+../../../ibus/ibdr_tm11.vbom
+../../../ibus/ibdr_dl11.vbom
+../../../ibus/ibdr_dl11_buf.vbom
+../../../ibus/ibdr_dz11.vbom
+../../../ibus/ibdr_pc11.vbom
+../../../ibus/ibdr_pc11_buf.vbom
+../../../ibus/ibdr_lp11.vbom
+../../../ibus/ibdr_lp11_buf.vbom
+../../../ibus/ibd_m9312.vbom
+../../../ibus/ibdr_sdreg.vbom
+../../../ibus/ib_sres_or_4.vbom
+../../../ibus/ib_sres_or_3.vbom
+../../../ibus/ib_intmap24.vbom
+# design
+ibdr_maxisys_sa.vhd

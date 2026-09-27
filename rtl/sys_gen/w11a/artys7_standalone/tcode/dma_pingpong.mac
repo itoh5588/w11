@@ -1,0 +1,48 @@
+; SPDX-License-Identifier: GPL-3.0-or-later
+;
+; CPU side of the native DMA ping-pong coherence test (w11_dma_pingpong).
+; The DMA master writes buf[j] = seq+j and then seq.  The CPU sees the new
+; seq through its cache, checks every word, writes the complement to obuf
+; and reports completion in ack.  ack shares a 32-bit memory word with seq,
+; so the DMA byte-enable write of seq must leave ack untouched.
+; buf is only read, so the CPU can be restarted at 'loop' at any time with
+; r4 = ack and r5 = errc (used by the GRESET test).
+;
+; r4  last seq handled    r5  error count (also stored in errc)
+;
+        buf  = 100000                   ; 512 words, byte 0x8000
+        seq  = 102000                   ; written by DMA   (low half)
+        ack  = 102002                   ; written by CPU   (high half)
+        errc = 102004                   ; CPU error count
+        obuf = 104000                   ; 512 words, byte 0x8800
+        nwrd = 1000                     ; 512 words
+
+        .asect
+        . = 1000
+
+start:  clr     @#seq
+        clr     @#ack
+        clr     @#errc
+        clr     r4
+        clr     r5
+loop:   mov     @#seq,r0                ; wait for a new seq
+        cmp     r0,r4
+        beq     loop
+        mov     r0,r2                   ; expected value
+        mov     #buf,r1
+        mov     #obuf,r0
+        mov     #nwrd,r3
+chk:    cmp     (r1),r2
+        beq     1$
+        inc     r5
+        mov     r5,@#errc
+1$:     mov     (r1)+,(r0)              ; hand back to DMA in obuf
+        com     (r0)+
+        inc     r2
+        sob     r3,chk
+        mov     r2,r4                   ; r4 = seq
+        sub     #nwrd,r4
+        mov     r4,@#ack
+        br      loop
+
+        .end    start

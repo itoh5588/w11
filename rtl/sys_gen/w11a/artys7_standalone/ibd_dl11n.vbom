@@ -1,0 +1,5 @@
+# native DL11 on a local UART
+../../../vlib/slvtypes.vhd
+../../../ibus/iblib.vhd
+../../../vlib/serport/serport_uart_rxtx.vbom
+ibd_dl11n.vhd

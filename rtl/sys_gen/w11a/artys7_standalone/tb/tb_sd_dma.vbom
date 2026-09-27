@@ -1,0 +1,3 @@
+../sdspi_rbus.vbom
+sdcard_spi_model.vhd
+tb_sd_dma.vhd

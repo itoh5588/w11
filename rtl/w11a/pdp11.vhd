@@ -1135,6 +1135,9 @@ component pdp11_cache is                -- cache
     MEM_BE : out slv4;                  -- memory: byte enable
     MEM_DI : out slv32;                 -- memory: data in  (memory view)
     MEM_DO : in slv32;                  -- memory: data out (memory view)
+    INV_REQ : in slbit;                 -- invalidate request
+    INV_ADDR : in slv20;                -- invalidate 32-bit word address
+    INV_ACK : out slbit;                -- invalidate acknowledge
     DM_STAT_CA : out dm_stat_ca_type    -- debug and monitor status - cache
   );
 end component;
@@ -1326,7 +1329,10 @@ component pdp11_sys70 is                -- 11/70 system 1 core +rbus,debug,cache
     MEM_BE : out slv4;                  -- memory: byte enable
     MEM_DI : out slv32;                 -- memory: data in  (memory view)
     MEM_DO : in slv32;                  -- memory: data out (memory view)
-    DM_STAT_EXP : out dm_stat_exp_type  -- debug and monitor - sys70 exports
+    DM_STAT_EXP : out dm_stat_exp_type; -- debug and monitor - sys70 exports
+    INV_REQ : in slbit := '0';          -- DMA cache invalidate request
+    INV_ADDR : in slv20 := (others=>'0'); -- DMA 32-bit word address
+    INV_ACK : out slbit := '0'          -- DMA cache invalidate acknowledge
   );
 end component;
 

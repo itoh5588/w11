@@ -1,0 +1,3 @@
+../w11_cpu_dma_path.vbom
+../w11_dma_pingpong.vbom
+tb_w11_dma_pingpong.vhd

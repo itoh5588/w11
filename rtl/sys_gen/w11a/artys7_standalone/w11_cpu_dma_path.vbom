@@ -1,0 +1,9 @@
+# PDP-11/70 system with native DMA memory arbitration
+../../../vlib/slvtypes.vhd
+../../../vlib/rbus/rblib.vhd
+../../../ibus/iblib.vhd
+../../../w11a/pdp11.vhd
+${sys_conf := ../artys7/sys_conf.vhd}
+../../../w11a/pdp11_sys70.vbom
+w11_mem_arbiter.vbom
+w11_cpu_dma_path.vhd

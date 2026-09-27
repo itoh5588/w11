@@ -1,0 +1,24 @@
+; SPDX-License-Identifier: GPL-3.0-or-later
+;
+; Bootstrap for the native RP07 controller, like a boot ROM: read block 0
+; (256 words) to address 0 and start it with r0 = unit 0, r1 = CSR.
+;
+        .asect
+        . = 140000
+
+start:  mov     #176700,r1
+        mov     #40,10(r1)              ; CS2: controller clear, unit 0
+        mov     #21,(r1)                ; PRESET: VV, DA = DC = 0
+        clr     4(r1)                   ; BA
+        clr     50(r1)                  ; BAE
+        mov     #-400,2(r1)             ; WC: 256 words
+        mov     #71,(r1)                ; READ + GO
+1$:     tstb    (r1)                    ; wait for RDY
+        bpl     1$
+        tst     (r1)                    ; SC: error
+        bmi     err
+        clr     r0                      ; unit 0
+        clr     pc                      ; start block 0
+err:    halt
+
+        .end    start

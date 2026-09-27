@@ -84,7 +84,10 @@ entity pdp11_sys70 is                   -- 11/70 system 1 core +rbus,debug,cache
     MEM_BE : out slv4;                  -- memory: byte enable
     MEM_DI : out slv32;                 -- memory: data in  (memory view)
     MEM_DO : in slv32;                  -- memory: data out (memory view)
-    DM_STAT_EXP : out dm_stat_exp_type  -- debug and monitor - sys70 exports
+    DM_STAT_EXP : out dm_stat_exp_type; -- debug and monitor - sys70 exports
+    INV_REQ : in slbit := '0';          -- DMA cache invalidate request
+    INV_ADDR : in slv20 := (others=>'0'); -- DMA 32-bit word address
+    INV_ACK : out slbit := '0'          -- DMA cache invalidate acknowledge
   );
 end pdp11_sys70;
 
@@ -203,6 +206,9 @@ begin
       MEM_BE     => MEM_BE,
       MEM_DI     => MEM_DI,
       MEM_DO     => MEM_DO,
+      INV_REQ    => INV_REQ,
+      INV_ADDR   => INV_ADDR,
+      INV_ACK    => INV_ACK,
       DM_STAT_CA => DM_STAT_CA
     );
 

@@ -60,6 +60,9 @@ entity pdp11_cache is                   -- cache
     MEM_BE : out slv4;                  -- memory: byte enable
     MEM_DI : out slv32;                 -- memory: data in  (memory view)
     MEM_DO : in slv32;                  -- memory: data out (memory view)
+    INV_REQ : in slbit;                 -- invalidate request
+    INV_ADDR : in slv20;                -- invalidate 32-bit word address
+    INV_ACK : out slbit;                -- invalidate acknowledge
     DM_STAT_CA : out dm_stat_ca_type    -- debug and monitor status - cache
   );
 end pdp11_cache;
@@ -111,6 +114,7 @@ architecture syn of pdp11_cache is
   signal R_REGS : regs_type := regs_init;
   signal N_REGS : regs_type;            -- don't init (vivado fix for fsm infer)
   
+  signal CMEM_ADDRB    : slv(l_range) := (others=>'0');
   signal CMEM_TAG_CEA  : slbit := '0';
   signal CMEM_TAG_CEB  : slbit := '0';
   signal CMEM_TAG_WEA  : slbit := '0';
@@ -152,7 +156,7 @@ begin
       WEA   => CMEM_TAG_WEA,
       WEB   => CMEM_TAG_WEB,
       ADDRA => EM_MREQ.addr(af_line),
-      ADDRB => R_REGS.addr_l,
+      ADDRB => CMEM_ADDRB,
       DIA   => EM_MREQ.addr(af_tag),
       DIB   => CMEM_TAG_DIB,
       DOA   => CMEM_TAG_DOA,
@@ -171,7 +175,7 @@ begin
       WEA   => CMEM_DAT_WEA(0),
       WEB   => CMEM_DAT_WEB(0),
       ADDRA => EM_MREQ.addr(af_line),
-      ADDRB => R_REGS.addr_l,
+      ADDRB => CMEM_ADDRB,
       DIA   => CMEM_DIA_0,
       DIB   => CMEM_DIB_0,
       DOA   => CMEM_DOA_0,
@@ -190,7 +194,7 @@ begin
       WEA   => CMEM_DAT_WEA(1),
       WEB   => CMEM_DAT_WEB(1),
       ADDRA => EM_MREQ.addr(af_line),
-      ADDRB => R_REGS.addr_l,
+      ADDRB => CMEM_ADDRB,
       DIA   => CMEM_DIA_1,
       DIB   => CMEM_DIB_1,
       DOA   => CMEM_DOA_1,
@@ -209,7 +213,7 @@ begin
       WEA   => CMEM_DAT_WEA(2),
       WEB   => CMEM_DAT_WEB(2),
       ADDRA => EM_MREQ.addr(af_line),
-      ADDRB => R_REGS.addr_l,
+      ADDRB => CMEM_ADDRB,
       DIA   => CMEM_DIA_2,
       DIB   => CMEM_DIB_2,
       DOA   => CMEM_DOA_2,
@@ -228,7 +232,7 @@ begin
       WEA   => CMEM_DAT_WEA(3),
       WEB   => CMEM_DAT_WEB(3),
       ADDRA => EM_MREQ.addr(af_line),
-      ADDRB => R_REGS.addr_l,
+      ADDRB => CMEM_ADDRB,
       DIA   => CMEM_DIA_3,
       DIB   => CMEM_DIB_3,
       DOA   => CMEM_DOA_3,
@@ -248,7 +252,7 @@ begin
 
   end process proc_regs;
 
-  proc_next: process (R_REGS, EM_MREQ, FMISS,
+  proc_next: process (R_REGS, EM_MREQ, FMISS, INV_REQ, INV_ADDR,
                       CMEM_TAG_DOA,
                       CMEM_DOA_0, CMEM_DOA_1, CMEM_DOA_2, CMEM_DOA_3, 
                       MEM_BUSY, MEM_ACK_R, MEM_DO)
@@ -279,6 +283,7 @@ begin
 
     variable iackr : slbit := '0';
     variable iackw : slbit := '0';
+    variable iinvack : slbit := '0';
     variable iosel : slv2  := "11";
     variable istat : dm_stat_ca_type := dm_stat_ca_init;
 
@@ -327,6 +332,7 @@ begin
 
     iackr := '0';
     iackw := '0';
+    iinvack := '0';
     iosel := "11";                      -- default to ext. mem data
                                         -- this prevents U's from cache bram's
                                         -- to propagate to dout in beginning...
@@ -361,6 +367,11 @@ begin
             icmem_dat_wea := n.be;            -- write cache data
             n.state := s_write;               -- next: write
           end if;
+        elsif INV_REQ = '1' then          -- invalidate via port B; stay idle
+          icmem_dat_ceb := '1';             -- so no req pulse can be lost
+          icmem_dat_web := "1111";
+          icmem_val_dib := "0000";
+          iinvack := '1';
         end if;
           
       when s_read =>                    -- s_read: read cycle
@@ -436,6 +447,11 @@ begin
     
     N_REGS <= n;
 
+    if r.state = s_idle then            -- port B is free in idle: invalidate
+      CMEM_ADDRB <= INV_ADDR(l_range);
+    else
+      CMEM_ADDRB <= r.addr_l;
+    end if;
     CMEM_TAG_CEA <= icmem_tag_cea;
     CMEM_TAG_CEB <= icmem_tag_ceb;
     CMEM_TAG_WEA <= icmem_tag_wea;
@@ -476,6 +492,7 @@ begin
     end case;
     
     DM_STAT_CA <= istat;
+    INV_ACK <= iinvack;
 
     MEM_REQ  <= imem_reqr or imem_reqw;
     MEM_WE   <= imem_reqw;

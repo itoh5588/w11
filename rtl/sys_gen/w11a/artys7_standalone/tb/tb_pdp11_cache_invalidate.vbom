@@ -1,0 +1,11 @@
+# libs
+../../../../vlib/slvtypes.vhd
+../../../../vlib/rbus/rblib.vhd
+../../../../ibus/iblib.vhd
+../../../../vlib/memlib/memlib.vhd
+../../../../w11a/pdp11.vhd
+# components
+../../../../vlib/memlib/ram_2swsr_rfirst_gen.vhd
+../../../../w11a/pdp11_cache.vhd
+# design
+tb_pdp11_cache_invalidate.vhd

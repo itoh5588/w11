@@ -1,0 +1,3 @@
+../../../../vlib/slvtypes.vhd
+../dma_mux2.vhd
+tb_dma_mux2.vhd

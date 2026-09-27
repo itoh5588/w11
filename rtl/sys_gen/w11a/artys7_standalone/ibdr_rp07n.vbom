@@ -1,0 +1,8 @@
+# native RH70/RP07 controller on an SD card
+../../../vlib/slvtypes.vhd
+../../../ibus/iblib.vhd
+sdspi_phy.vhd
+sdspi_ctl.vhd
+sd_dma_wr.vhd
+sd_dma_rd.vhd
+ibdr_rp07n.vhd

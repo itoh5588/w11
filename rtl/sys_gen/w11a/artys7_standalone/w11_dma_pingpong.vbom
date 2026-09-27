@@ -1,0 +1,5 @@
+# DMA master for the ping-pong coherence test
+../../../vlib/slvtypes.vhd
+../../../vlib/rbus/rblib.vhd
+../../../vlib/rbus/rb_sel.vbom
+w11_dma_pingpong.vhd

@@ -1,0 +1,23 @@
+# libs
+../../../vlib/slvtypes.vhd
+../../../vlib/xlib/xlib.vhd
+../../../vlib/cdclib/cdclib.vhd
+../../../vlib/rbus/rblib.vhd
+../../../ibus/iblib.vhd
+../../../vlib/memlib/memlib.vhd
+../../../bplib/bpgen/bpgenlib.vbom
+../../../bplib/mig/miglib.vbom
+../../../bplib/artys7/miglib_artys7.vbom
+../../../w11a/pdp11.vhd
+# components
+../../../vlib/xlib/bufg_unisim.vbom
+../../../bplib/bpgen/s7_cmt_1ce1ce2c.vbom
+../../../vlib/cdclib/cdc_signal_s1_as.vbom
+../../../w11a/pdp11_cache.vbom
+../../../bplib/artys7/sramif_mig_artys7.vbom
+../../../bplib/sysmon/sysmonx_rbus_base.vbom
+w11_mem_arbiter.vbom
+# design
+sys_w11a_dma_test_as7.vhd
+@xdc:../../../bplib/artys7/artys7_pclk.xdc
+@xdc:../../../bplib/artys7/artys7_pins.xdc
