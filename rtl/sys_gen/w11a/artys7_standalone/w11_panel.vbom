@@ -1,0 +1,8 @@
+# libs
+../../../vlib/slvtypes.vhd
+../../../vlib/rbus/rblib.vhd
+../../../ibus/iblib.vhd
+../../../w11a/pdp11.vhd
+# components
+# design
+w11_panel.vhd

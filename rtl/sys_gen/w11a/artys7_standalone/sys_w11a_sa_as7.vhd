@@ -7,6 +7,10 @@
 -- for debugging only.
 -- Derived from sys_w11a_sa_as7.
 --
+-- Front panel (w11_panel): SW3 = 1 gives the on-board USB-UART to a PDP-11/70
+-- panel drawn on the host (tcode/panel.html, 115200 bps) instead of rlink;
+-- SW3 = 0 is as before.  SW3 is not passed to the LED mode (MODE(3) = 0).
+--
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
@@ -95,6 +99,25 @@ architecture syn of sys_w11a_sa_as7 is
   signal AS_ACTIVE      : slbit := '0';
   signal AS_START       : slbit := '0';
   signal BTN3_R         : slbit := '0';
+  signal RB_MREQ_PN     : rb_mreq_type := rb_mreq_init;
+  signal PN_ACTIVE      : slbit := '0';
+  signal PN_RXD         : slbit := '1';  -- panel: from host, on CLK
+  signal PN_TXD         : slbit := '1';  -- panel: to host, on CLK
+  signal PN_TXD_S0      : slbit := '1';  -- on CLKS
+  signal PN_TXD_S1      : slbit := '1';
+  signal PN_MODE_S0     : slbit := '0';  -- SW3 on CLKS
+  signal PN_MODE_S1     : slbit := '0';
+  signal RXD_RL         : slbit := '1';  -- rlink serial in
+  signal TXD_RL         : slbit := '1';  -- rlink serial out
+  signal PN_RXD_S0      : slbit := '1';  -- serial in on CLK
+  signal PN_RXD_S1      : slbit := '1';
+  attribute ASYNC_REG : string;
+  attribute ASYNC_REG of PN_TXD_S0  : signal is "true";
+  attribute ASYNC_REG of PN_TXD_S1  : signal is "true";
+  attribute ASYNC_REG of PN_MODE_S0 : signal is "true";
+  attribute ASYNC_REG of PN_MODE_S1 : signal is "true";
+  attribute ASYNC_REG of PN_RXD_S0  : signal is "true";
+  attribute ASYNC_REG of PN_RXD_S1  : signal is "true";
   signal RB_SRES        : rb_sres_type := rb_sres_init;
   signal RB_SRES_CPU    : rb_sres_type := rb_sres_init;
   signal RB_SRES_SYSMON : rb_sres_type := rb_sres_init;
@@ -169,6 +192,7 @@ architecture syn of sys_w11a_sa_as7 is
   signal IOLEDS   : slv4  := (others=>'0');
 
   signal SWI     : slv4 := (others=>'0');
+  signal HIO_MODE : slv4 := (others=>'0');
   signal BTN     : slv4 := (others=>'0');
   signal LED     : slv4 := (others=>'0');
   signal RGB_R   : slv2 := (others=>'0');
@@ -281,8 +305,8 @@ begin
       CES_MSEC => CES_MSEC,
       ENAXON   => '1',                  -- XON statically enabled !
       ESCFILL  => '0',
-      RXSD     => RXD,
-      TXSD     => TXD,
+      RXSD     => RXD_RL,
+      TXSD     => TXD_RL,
       CTS_N    => '0',
       RTS_N    => open,
       RB_MREQ  => RB_MREQ_RL,
@@ -315,7 +339,52 @@ begin
   end process proc_btn3;
 
   AS_START <= BTN(3) and not BTN3_R;
-  RB_MREQ <= RB_MREQ_AS when AS_ACTIVE = '1' else RB_MREQ_RL;
+  RB_MREQ <= RB_MREQ_AS when AS_ACTIVE = '1' else
+             RB_MREQ_PN when PN_ACTIVE = '1' else
+             RB_MREQ_RL;
+
+  -- on-board USB-UART: rlink (SW3 = 0) or the front panel (SW3 = 1)
+  proc_pn_clks: process (CLKS)
+  begin
+    if rising_edge(CLKS) then
+      PN_TXD_S0  <= PN_TXD;
+      PN_TXD_S1  <= PN_TXD_S0;
+      PN_MODE_S0 <= SWI(3);
+      PN_MODE_S1 <= PN_MODE_S0;
+    end if;
+  end process proc_pn_clks;
+
+  RXD_RL <= RXD or PN_MODE_S1;          -- idle for rlink in panel mode
+  TXD <= PN_TXD_S1 when PN_MODE_S1 = '1' else TXD_RL;
+
+  proc_pn_clk: process (CLK)
+  begin
+    if rising_edge(CLK) then
+      PN_RXD_S0 <= RXD;
+      PN_RXD_S1 <= PN_RXD_S0;
+    end if;
+  end process proc_pn_clk;
+
+  PN_RXD <= PN_RXD_S1 or not SWI(3);
+
+  PANEL : entity work.w11_panel         -- PDP-11/70 front panel on the host -
+    generic map (
+      CDIV    => sys_conf_clksys / 115200,
+      RB_BASE => x"0000")               -- cpu0 cp registers
+    port map (
+      CLK         => CLK,
+      RESET       => GBL_RESET,
+      RXD         => PN_RXD,
+      TXD         => PN_TXD,
+      HOLD        => AS_ACTIVE,
+      ACTIVE      => PN_ACTIVE,
+      RB_MREQ     => RB_MREQ_PN,
+      RB_SRES     => RB_SRES,
+      CP_STAT     => CP_STAT,
+      DM_STAT_EXP => DM_STAT_EXP,
+      DISPREG     => DISPREG,
+      DMA_ACT     => DMA_REQ
+    );
 
   PERFEXT(0) <= MIG_MONI.rdrhit;        -- ext_rdrhit
   PERFEXT(1) <= MIG_MONI.wrrhit;        -- ext_wrrhit
@@ -535,12 +604,14 @@ begin
       IOLEDS   => IOLEDS
     );
 
+  HIO_MODE <= '0' & SWI(2 downto 0);   -- SW3 selects the panel
+
   ABCLKDIV <= SER_MONI.abclkdiv(11 downto 0) & '0' & SER_MONI.abclkdiv_f;
 
   HIO70 : entity work.pdp11_hio70_artys7 -- hio from sys70 --------------------
     port map (
       CLK         => CLK,
-      MODE        => SWI,
+      MODE        => HIO_MODE,
       MEM_ACT_R   => MEM_ACT_R,
       MEM_ACT_W   => MEM_ACT_W,
       CP_STAT     => CP_STAT,

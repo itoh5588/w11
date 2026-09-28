@@ -698,6 +698,7 @@ package pdp11 is
     ibsres : ib_sres_type;              -- ibus: response
     emmreq : em_mreq_type;              -- external memory: request
     emsres : em_sres_type;              -- external memory: response
+    mmustat : mmu_stat_type;            -- mmu: status (mmr0/mmr3 enables)
   end record dm_stat_vm_type;
 
   constant dm_stat_vm_init : dm_stat_vm_type := (
@@ -709,7 +710,8 @@ package pdp11 is
     ib_mreq_init,                       -- ibmreq
     ib_sres_init,                       -- ibsres
     em_mreq_init,                       -- emmreq
-    em_sres_init                        -- emsres
+    em_sres_init,                       -- emsres
+    mmu_stat_init                       -- mmustat
     );
 
   type dm_stat_co_type is record        -- debug and monitor status - core
@@ -747,13 +749,29 @@ package pdp11 is
     dp_dsrc : slv16;                    -- DM_STAT_DP: dsrc register
     se_idec   : slbit;                  -- DM_STAT_SE: instruction decode
     se_itimer : slbit;                  -- DM_STAT_SE: instruction timer
+    dp_dres : slv16;                    -- DM_STAT_DP: dres bus
+    se_snum : slv8;                     -- DM_STAT_SE: state number
+    vm_cntl : vm_cntl_type;             -- DM_STAT_VM: vmbox control
+    vm_addr : slv16;                    -- DM_STAT_VM: vmbox address
+    vm_emmreq : em_mreq_type;           -- DM_STAT_VM: ext memory request
+    vm_emsres : em_sres_type;           -- DM_STAT_VM: ext memory response
+    vm_ibmreq : ib_mreq_type;           -- DM_STAT_VM: ibus request
+    vm_mmustat : mmu_stat_type;         -- DM_STAT_VM: mmu status
   end record dm_stat_exp_type;
 
   constant dm_stat_exp_init : dm_stat_exp_type := (
     (others=>'0'),                      -- dp_pc
     psw_init,                           -- dp_psw
     (others=>'0'),                      -- dp_dsrc
-    '0','0'                             -- se_idec,se_itimer
+    '0','0',                            -- se_idec,se_itimer
+    (others=>'0'),                      -- dp_dres
+    (others=>'0'),                      -- se_snum
+    vm_cntl_init,                       -- vm_cntl
+    (others=>'0'),                      -- vm_addr
+    em_mreq_init,                       -- vm_emmreq
+    em_sres_init,                       -- vm_emsres
+    ib_mreq_init,                       -- vm_ibmreq
+    mmu_stat_init                       -- vm_mmustat
   );
 
 -- rbus interface definitions ------------------------------------------------

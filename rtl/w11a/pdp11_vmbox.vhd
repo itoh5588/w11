@@ -700,5 +700,6 @@ begin
   DM_STAT_VM.ibsres <= IB_SRES;
   DM_STAT_VM.emmreq <= EM_MREQ_L;
   DM_STAT_VM.emsres <= EM_SRES;
+  DM_STAT_VM.mmustat <= MMU_STAT;
 
 end syn;

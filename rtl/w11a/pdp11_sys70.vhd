@@ -441,6 +441,14 @@ begin
   DM_STAT_EXP.dp_dsrc   <= DM_STAT_DP.dsrc;
   DM_STAT_EXP.se_idec   <= DM_STAT_SE.idec;
   DM_STAT_EXP.se_itimer <= DM_STAT_SE.itimer;
+  DM_STAT_EXP.dp_dres   <= DM_STAT_DP.dres;
+  DM_STAT_EXP.se_snum   <= DM_STAT_SE.snum;
+  DM_STAT_EXP.vm_cntl   <= DM_STAT_VM.vmcntl;
+  DM_STAT_EXP.vm_addr   <= DM_STAT_VM.vmaddr;
+  DM_STAT_EXP.vm_emmreq <= DM_STAT_VM.emmreq;
+  DM_STAT_EXP.vm_emsres <= DM_STAT_VM.emsres;
+  DM_STAT_EXP.vm_ibmreq <= DM_STAT_VM.ibmreq;
+  DM_STAT_EXP.vm_mmustat <= DM_STAT_VM.mmustat;
   
 -- synthesis translate_off
   

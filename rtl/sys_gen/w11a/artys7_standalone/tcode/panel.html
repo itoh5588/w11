@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PDP-11/70 Panel</title>
+<!--
+  panel.html - PDP-11/70 front panel for the standalone w11 on the Arty S7
+  (sys_w11a_sa_as7, w11_panel.vhd); taken from the PDP2011 Arty S7 port, same
+  serial protocol
+
+  Open in Chrome or Edge (Web Serial). Set SW3 = 1 on the board: the on-board
+  USB-UART (FT2232 channel B) is then the panel at 115200 bps instead of rlink;
+  the console is on the TTL cable on Pmod JC as always. The board must not be
+  attached to WSL (usbipd).
+
+  Layout and colors after photos of the real 11/70 panel (Wikimedia Commons
+  Pdp-11-70-panel.jpg) and of a PiDP-11 (hotto.de), drawn in a 1600 x 884
+  coordinate system and scaled to the window.
+
+  From the board: 0x80, then 51 bytes of lamp brightness 0..15
+    0..21 address, 22..37 data, 38 par low, 39 par high, 40 adrs err, 41 run,
+    42 pause, 43 master, 44 user, 45 super, 46 kernel, 47 data, 48 16 bit,
+    49 18 bit, 50 22 bit
+  To the board: 0x81 + 4 bytes switch register, 0x82 + levels, 0x83 + pulses,
+  each followed by a check byte (xor of the low 7 bits of all bytes)
+-->
+<style>
+  :root {
+    --page: #111014;
+    --bezel: #e8e3d6;           /* cream frame */
+    --bezel-dark: #cfc8b7;
+    --plum: #2a1a24;            /* the panel */
+    --crimson: #a8354f;         /* bands and tiles */
+    --purple: #5f3a63;
+    --pad-crimson: #cf3159;     /* paddles */
+    --pad-purple: #6a2c60;
+    --cell: #1d1219;            /* lamp cells */
+    --box: #1a1016;
+    --lamp-off: #3a1519;
+    --lamp-on: #ff2a1f;
+    --lamp-glow: rgba(255, 30, 20, 0.85);
+    --text: #f1ecef;
+    --muted: #a9a0a6;
+    --armed: #ffd24a;
+    --ok: #6fcf7f;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--page); color: var(--text);
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif; }
+  body { padding: 16px; }
+  .wrap { max-width: 1640px; margin: 0 auto; }
+  .stage { position: relative; width: 100%; }
+  .panel { position: absolute; left: 0; top: 0; width: 1600px; height: 884px; transform-origin: 0 0; user-select: none; }
+  .bezel { position: absolute; left: 30px; top: 28px; width: 1540px; height: 830px; border-radius: 22px 22px 14px 14px;
+    background: linear-gradient(180deg, #f1ede2 0%, var(--bezel) 40%, var(--bezel-dark) 100%);
+    box-shadow: 0 14px 40px rgba(0,0,0,.7), inset 0 -8px 16px rgba(0,0,0,.12); }
+  .strip { position: absolute; left: 48px; top: 50px; width: 972px; height: 64px; border-radius: 8px;
+    background: linear-gradient(180deg, #ece7db, #e2ddd0); box-shadow: inset 0 1px 0 #fff, inset 0 -1px 2px rgba(0,0,0,.15),
+    0 1px 2px rgba(0,0,0,.15); }
+  .emboss { color: #e6e1d4; text-shadow: -1px -1px 0 #fffdf6, 1px 1px 1px rgba(0,0,0,.35); }
+  .inner { position: absolute; left: 62px; top: 148px; width: 1478px; height: 516px; border-radius: 26px 26px 0 0;
+    background: radial-gradient(ellipse at 45% 35%, #33202c 0%, var(--plum) 60%, #22151d 100%);
+    box-shadow: inset 0 3px 10px rgba(0,0,0,.6); }
+  .well { position: absolute; left: 100px; top: 656px; width: 1406px; height: 130px; background: #1b1117;
+    border-radius: 2px; box-shadow: inset 0 4px 10px rgba(0,0,0,.7); }
+
+  .lbl { position: absolute; font-size: 9.5px; font-weight: 700; color: var(--text); text-align: center;
+    line-height: 1.05; transform: translateX(-50%); white-space: nowrap; }
+  .lbl.left { transform: none; text-align: left; font-size: 11.5px; }
+
+  .box { position: absolute; background: var(--box); border-radius: 8px; }
+  .cell { position: absolute; background: var(--cell); border-radius: 0 0 7px 7px; }
+  .scell { position: absolute; width: 40px; height: 36px; margin: -18px 0 0 -20px; background: var(--cell); border-radius: 6px; }
+  .band { position: absolute; height: 18px; }
+  .band.crimson { background: var(--crimson); } .band.purple { background: var(--purple); }
+  .band .t { position: absolute; right: 6px; top: 1px; font-size: 13px; font-weight: 700; color: #fff; }
+  .notch { position: absolute; width: 10px; height: 8px; top: 18px; }
+
+  .lamp { position: absolute; width: 18px; height: 18px; margin: -9px 0 0 -9px; border-radius: 50%;
+    background: radial-gradient(circle at 45% 40%, #4a1c20, var(--lamp-off)); box-shadow: inset 0 1px 2px rgba(0,0,0,.7); }
+  .lamp::after { content: ""; position: absolute; inset: 0; border-radius: 50%;
+    background: radial-gradient(circle at 45% 40%, #ffd0c0 0%, var(--lamp-on) 45%, #c4120c 100%);
+    box-shadow: 0 0 10px 3px var(--lamp-glow); opacity: var(--b, 0); transition: opacity 40ms linear; }
+
+  .tile { position: absolute; top: 582px; width: 42px; height: 54px; margin-left: -21px; border-radius: 4px;
+    display: flex; align-items: center; justify-content: center; text-align: center;
+    font-size: 13px; font-weight: 700; color: #fff; line-height: 1.1; }
+  .tile.crimson { background: var(--crimson); } .tile.purple { background: var(--purple); }
+  .tile.small { font-size: 8.5px; }
+  .tile.split { flex-direction: column; background: transparent; gap: 4px; }
+  .tile.split div { width: 42px; height: 25px; border-radius: 4px; display: flex; align-items: center; justify-content: center;
+    font-size: 8.5px; line-height: 1.05; }
+
+  /* paddles: a rocker, lit from above when up */
+  .paddle { position: absolute; top: 662px; width: 44px; height: 116px; margin-left: -22px; cursor: pointer;
+    border: 0; padding: 0; background: transparent; }
+  .paddle .face { position: absolute; inset: 0; border-radius: 3px;
+    box-shadow: inset -5px 0 6px rgba(0,0,0,.25), 0 3px 2px rgba(0,0,0,.6); transition: background 60ms; }
+  .paddle.crimson { --hi: #f0507a; --mid: var(--pad-crimson); --lo: #8e1d3b; --dk: #5c1226; }
+  .paddle.purple  { --hi: #93488a; --mid: var(--pad-purple); --lo: #461c40; --dk: #2c1128; }
+  .paddle .face { background: linear-gradient(180deg, var(--lo) 0%, var(--dk) 42%, var(--hi) 46%, var(--mid) 70%, var(--lo) 100%); }
+  .paddle.up .face, .paddle.flash .face {
+    background: linear-gradient(180deg, var(--hi) 0%, var(--mid) 40%, var(--lo) 46%, var(--dk) 75%, #1a0a12 100%); }
+  .paddle.armed .face { box-shadow: 0 0 0 3px var(--armed), 0 0 18px var(--armed); }
+  .paddle[disabled] { cursor: not-allowed; }
+  .paddle:focus-visible { outline: 2px solid #fff; outline-offset: 3px; }
+  .blank { position: absolute; top: 662px; left: 1122px; width: 46px; height: 116px;
+    background: linear-gradient(90deg, #d9d4c6, #f4f1e8 40%, #d2ccbe); border-radius: 2px; }
+
+  .knob { position: absolute; width: 60px; height: 60px; margin: -30px 0 0 -30px; border-radius: 50%; cursor: pointer;
+    background: radial-gradient(circle at 38% 32%, #4a4a4a 0%, #1c1c1c 55%, #050505 100%);
+    box-shadow: 0 4px 8px rgba(0,0,0,.8), inset 0 1px 1px rgba(255,255,255,.15); }
+  .knob .ptr { position: absolute; left: 50%; top: 50%; width: 26px; height: 4px; margin-top: -2px; border-radius: 2px;
+    background: #f4f4f0; transform-origin: 0 50%; }
+  .knob .ptr::after { content: ""; position: absolute; left: -5px; top: -3px; width: 10px; height: 10px; border-radius: 50%; background: #f4f4f0; }
+  .pos { cursor: pointer; }
+
+  .key { position: absolute; left: 158px; top: 494px; width: 62px; height: 62px; margin: -31px 0 0 -31px; border-radius: 50%;
+    background: radial-gradient(circle, #555 0%, #2a2a2a 50%, #111 70%, #333 100%); box-shadow: 0 3px 6px rgba(0,0,0,.8); }
+  .key::after { content: ""; position: absolute; left: 50%; top: 50%; width: 44px; height: 8px; margin: -4px -22px;
+    background: linear-gradient(#c8c8c2, #86867f); border-radius: 3px; transform: rotate(-35deg); }
+
+  .bar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin: 12px 2px 0; font-size: 13px; color: var(--muted); }
+  .bar button { background: #2b2229; color: var(--text); border: 1px solid #4a3a45; border-radius: 6px;
+    padding: 6px 12px; cursor: pointer; font: inherit; }
+  .bar button:hover { background: #3a2d37; }
+  .bar button.primary { background: var(--crimson); color: #fff; border-color: #c95573; }
+  .dot { width: 9px; height: 9px; border-radius: 50%; background: #555; display: inline-block; margin-right: 6px; }
+  .dot.on { background: var(--ok); box-shadow: 0 0 6px var(--ok); }
+  .readout { font-family: Consolas, Menlo, monospace; font-size: 13px; color: var(--muted); margin: 8px 2px 0; }
+  .readout b { color: #ffb0a8; font-weight: 400; letter-spacing: .06em; }
+  .hint { color: var(--muted); font-size: 12px; margin: 8px 2px 0; line-height: 1.5; }
+  .err { color: #ff8a80; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="bar" style="margin:0 2px 10px">
+    <button class="primary" id="connect">Connect</button>
+    <span><span class="dot" id="dot"></span><span id="state">not connected</span></span>
+    <span id="fps"></span>
+    <span style="flex:1"></span>
+    <button id="lamptest">Lamp test</button>
+    <button id="demo">Demo</button>
+    <button id="clear">Clear switches</button>
+  </div>
+  <div class="stage" id="stage"><div class="panel" id="panel"></div></div>
+  <div class="readout" id="readout"></div>
+  <div class="hint">
+    Board: <b>SW3 = 1</b> (panel on the on-board USB-UART instead of rlink, console on the JC cable); the board must not be attached to WSL.
+    HALT and START are armed by the first click and done by a second click within 3 s.
+    EXAM / DEP / LOAD ADRS work while halted. Knobs: click a position, or click the knob (right click: back).
+    Switches: click; Shift+click clears the octal digit.
+  </div>
+</div>
+
+<script>
+"use strict";
+// show any error on the page (there is no console on a panel)
+window.addEventListener("error", e => { const s = document.getElementById("state"); if (s) { s.textContent = "error: " + e.message; s.className = "err"; } });
+window.addEventListener("unhandledrejection", e => { const s = document.getElementById("state"); if (s) { s.textContent = "error: " + (e.reason && e.reason.message || e.reason); s.className = "err"; } });
+const NL = 51;
+const bright = new Uint8Array(NL);          // 0..15 per lamp, from the board
+let sw = 0;                                  // switch register, 22 bits
+let adss = 0, ddss = 0, halt = 0;            // knobs (codes as in panel.vhd), halt
+let port = null, writer = null, reader = null;
+let lampTest = false, demo = false, frames = 0, lineErrors = 0;
+
+const $ = id => document.getElementById(id);
+const P = $("panel");
+function el(tag, cls, css, html) {
+  const e = document.createElement(tag);
+  if (cls) e.className = cls;
+  if (css) Object.assign(e.style, css);
+  if (html !== undefined) e.innerHTML = html;
+  P.appendChild(e); return e;
+}
+const px = v => v + "px";
+
+// ---------------------------------------------------------------- geometry
+const colX = bit => 138 + (21 - bit) * 45.71;         // bit 21 at x 138, bit 0 at x 1098
+// 21 crimson, 20-18 purple, 17-15 crimson, 14-12 purple, 11-9 crimson, 8-6 purple, 5-3 crimson, 2-0 purple
+const colorOfBit = bit => bit === 21 ? "crimson" : (Math.floor((20 - bit) / 3) % 2 === 0 ? "purple" : "crimson");
+
+// ---------------------------------------------------------------- frame, logos
+el("div", "bezel");
+el("div", "strip");
+// DEC logo: one letter in each box
+{
+  const letters = "digital".split("");
+  letters.forEach((c, i) => {
+    el("div", "emboss", { position: "absolute", left: px(110 + i * 21), top: "60px", width: "19px", height: "44px",
+      borderRadius: "2px", boxShadow: "inset 1px 1px 0 #fffdf6, inset -1px -1px 1px rgba(0,0,0,.3)",
+      display: "flex", alignItems: "center", justifyContent: "center", fontSize: "30px", fontWeight: "300",
+      fontFamily: "'Helvetica Neue', Arial, sans-serif" }, c);
+  });
+  el("div", "emboss", { position: "absolute", left: "268px", top: "66px", fontSize: "25px", letterSpacing: ".01em",
+    fontFamily: "'Century Gothic','URW Gothic','Avant Garde','Futura','Avenir',sans-serif" },
+    "digital equipment corporation · maynard, massachusetts");
+}
+el("div", "inner");
+el("div", "well");
+el("div", null, { position: "absolute", left: "112px", top: "230px" }, `<svg width="210" height="72" viewBox="0 0 210 72" aria-label="pdp 11/70">
+  <g font-family="'Century Gothic','URW Gothic','Avant Garde','Futura','Avenir',sans-serif" font-size="50">
+    <text x="0" y="52" fill="none" stroke="#fff" stroke-width="1.8" textLength="88" lengthAdjust="spacingAndGlyphs">pdp</text>
+    <text x="90" y="52" fill="#fff" stroke="#fff" stroke-width="1" font-weight="700" textLength="34" lengthAdjust="spacingAndGlyphs">11</text>
+    <line x1="146" y1="8" x2="128" y2="64" stroke="#fff" stroke-width="2.4"/>
+    <text x="140" y="52" fill="none" stroke="#fff" stroke-width="1.8" textLength="60" lengthAdjust="spacingAndGlyphs">70</text>
+  </g></svg>`);
+
+// ---------------------------------------------------------------- lamps
+const lampEls = new Array(NL);
+function lamp(idx, x, y) {
+  const l = el("div", "lamp", { left: px(x), top: px(y) });
+  if (idx !== null) lampEls[idx] = l;
+  return l;
+}
+
+// status box at the top
+el("div", "box", { left: "575px", top: "236px", width: "545px", height: "58px" });
+const status = [[null, "PAR<br>ERR", 595], [40, "ADRS<br>ERR", 641], [41, "RUN", 688], [42, "PAUSE", 733], [43, "MASTER", 779],
+  [44, "USER", 825], [45, "SUPER", 870], [46, "KERNEL", 916], [47, "DATA", 961], [48, "16", 1008], [49, "18", 1054], [50, "22", 1100]];
+let parErrLamp = null;
+status.forEach(([idx, label, x], i) => {
+  el("div", "lbl", { left: px(x), top: i < 2 ? "238px" : (i >= 9 ? "248px" : "241px"), fontSize: i >= 9 ? "8px" : "9.5px" }, label);
+  el("div", "scell", { left: px(x), top: "274px" });
+  const l = lamp(idx, x, 274);
+  if (idx === null) parErrLamp = l;                 // PAR ERR: follows the parity lamps
+});
+el("div", "lbl", { left: "1054px", top: "238px", fontSize: "8.5px" }, "ADDRESSING");
+
+// address row
+function bands(top, from, label, notches) {
+  const groups = [[21, 21], [20, 18], [17, 15], [14, 12], [11, 9], [8, 6], [5, 3], [2, 0]];
+  for (const [hi, lo] of groups) {
+    if (lo > from) continue;
+    const h = Math.min(hi, from);
+    const l = colX(h) - 20, r = colX(lo) + 20;
+    const c = colorOfBit(h);
+    const b = el("div", "band " + c, { left: px(l), top: px(top), width: px(r - l) });
+    if (lo === 0 && label) b.innerHTML = `<span class="t">${label}</span>`;
+    // the data bands have a small notch under the middle of some groups (as on the real panel)
+    if (notches && notches.includes(hi)) el("div", "notch", { left: px(colX(hi) + 18), top: px(top + 18), background: `var(--${c})`,
+      clipPath: "polygon(0 0, 100% 0, 50% 100%)" });
+  }
+}
+for (let bit = 21; bit >= 0; bit--) {
+  el("div", "cell", { left: px(colX(bit) - 20), top: "338px", width: "40px", height: "72px" });
+  lamp(bit, colX(bit), 392);
+}
+bands(320, 21, "ADDRESS");
+
+// data row
+for (let bit = 15; bit >= 0; bit--) {
+  el("div", "cell", { left: px(colX(bit) - 20), top: "468px", width: "40px", height: "72px" });
+  lamp(22 + bit, colX(bit), 522);
+}
+bands(450, 15, "DATA", [14, 11, 8]);
+
+// parity box, key
+el("div", "box", { left: "254px", top: "446px", width: "88px", height: "96px" });
+el("div", "lbl", { left: "298px", top: "451px", fontSize: "13px", fontWeight: "700" }, "PARITY");
+el("div", "lbl", { left: "276px", top: "467px", fontSize: "11px" }, "HIGH");
+el("div", "lbl", { left: "320px", top: "467px", fontSize: "11px" }, "LOW");
+lamp(39, 277, 522); lamp(38, 320, 522);
+el("div", "key");
+el("div", "lbl", { left: "138px", top: "448px", fontSize: "8.5px" }, "POWER");
+el("div", "lbl", { left: "190px", top: "448px", fontSize: "8.5px" }, "LOCK");
+el("div", "lbl", { left: "130px", top: "535px", fontSize: "8.5px" }, "OFF");
+
+// knob boxes: the position lamps are driven by the page
+const addrPos = [ // [code, label, x, y]
+  [4, "USER D", 1205, 272], [3, "SUPER D", 1205, 309], [2, "KERNEL D", 1205, 346], [1, "CONS PHY", 1205, 383],
+  [5, "USER I", 1308, 272], [6, "SUPER I", 1308, 309], [7, "KERNEL I", 1308, 346], [0, "PROG PHY", 1308, 383]];
+const dataPos = [
+  [0, "DATA<br>PATHS", 1205, 481], [1, "BUS REG", 1205, 518], [3, "&micro; ADRS<br>FPP/CPU", 1308, 481], [2, "DISPLAY<br>REGISTER", 1308, 518]];
+el("div", "box", { left: "1172px", top: "238px", width: "314px", height: "172px" });
+el("div", "box", { left: "1172px", top: "448px", width: "314px", height: "94px" });
+const addrLamps = {}, dataLamps = {};
+function knobPositions(list, lamps, set) {
+  for (const [code, label, x, y] of list) {
+    const l = lamp(null, x, y); l.classList.add("pos"); lamps[code] = l;
+    const t = el("div", "lbl left pos", { left: px(x + 18), top: px(y - (label.includes("<br>") ? 12 : 6)) }, label);
+    for (const e of [l, t]) e.addEventListener("click", () => set(code));
+  }
+}
+knobPositions(addrPos, addrLamps, v => setAdss(v));
+knobPositions(dataPos, dataLamps, v => setDdss(v));
+const knobA = el("div", "knob", { left: "1440px", top: "326px" }, `<div class="ptr"></div>`);
+const knobD = el("div", "knob", { left: "1446px", top: "492px" }, `<div class="ptr"></div>`);
+knobA.onclick = () => setAdss((adss + 1) % 8);
+knobA.oncontextmenu = e => { e.preventDefault(); setAdss((adss + 7) % 8); };
+knobD.onclick = () => setDdss((ddss + 1) % 4);
+knobD.oncontextmenu = e => { e.preventDefault(); setDdss((ddss + 3) % 4); };
+function setAdss(v) { adss = v; drawKnobs(); sendLevels(); }
+function setDdss(v) { ddss = v; drawKnobs(); sendLevels(); }
+// pointer angle: toward the selected position lamp
+function aim(knob, kx, ky, pos, code) {
+  const p = pos.find(q => q[0] === code);
+  const a = Math.atan2(p[3] - ky, p[2] + 40 - kx) * 180 / Math.PI;
+  knob.querySelector(".ptr").style.transform = `rotate(${a}deg)`;
+}
+function drawKnobs() {
+  for (const k in addrLamps) addrLamps[k].style.setProperty("--b", +k === adss ? 1 : 0);
+  for (const k in dataLamps) dataLamps[k].style.setProperty("--b", +k === ddss ? 1 : 0);
+  aim(knobA, 1440, 326, addrPos, adss);
+  aim(knobD, 1446, 492, dataPos, ddss);
+}
+
+// ---------------------------------------------------------------- switches
+const swEls = [];
+for (let bit = 21; bit >= 0; bit--) {
+  const c = colorOfBit(bit);
+  const tile = el("div", "tile " + c, { left: px(colX(bit)), cursor: "pointer" }, String(bit));
+  const p = el("button", "paddle " + c, { left: px(colX(bit)) }, `<div class="face"></div>`);
+  tile.addEventListener("click", ev => p.dispatchEvent(new MouseEvent("click", { shiftKey: ev.shiftKey })));
+  p.setAttribute("aria-label", "switch " + bit);
+  p.addEventListener("click", ev => {
+    if (ev.shiftKey) sw &= ~(bit === 21 ? (1 << 21) : (7 << (Math.floor(bit / 3) * 3)));
+    else sw ^= (1 << bit);
+    sw &= 0x3fffff; drawSwitches(); sendSw();
+  });
+  swEls[bit] = p;
+}
+function drawSwitches() { for (let b = 0; b < 22; b++) swEls[b].classList.toggle("up", !!(sw & (1 << b))); }
+el("div", "blank");                                     // the blank between switch 0 and LOAD ADRS
+
+const ctl = {};
+const ctlDefs = [ // key, tile html, color, x, pulse bit
+  ["load", "LOAD<br>ADRS", "crimson", 1190, 0], ["exam", "EXAM", "purple", 1236, 1],
+  ["dep", "DEP", "crimson", 1282, 2], ["cont", "CONT", "purple", 1328, 3],
+  ["halt", null, "crimson", 1374, null], ["sinst", null, "purple", 1420, null],
+  ["start", "START", "crimson", 1466, 4]];
+for (const [key, label, c, x, bitno] of ctlDefs) {
+  let tile;
+  if (key === "halt") tile = el("div", "tile split", { left: px(x) }, `<div style="background:var(--crimson)">ENABLE</div><div style="background:var(--crimson)">HALT</div>`);
+  else if (key === "sinst") tile = el("div", "tile split", { left: px(x) }, `<div style="background:var(--purple)">S INST</div><div style="background:var(--purple)">S BUS<br>CYCLE</div>`);
+  else tile = el("div", "tile small " + c, { left: px(x) }, label);
+  const p = el("button", "paddle " + c, { left: px(x) }, `<div class="face"></div>`);
+  p.setAttribute("aria-label", key);
+  ctl[key] = p;
+  if (key === "sinst") { p.disabled = true; p.title = "not in w11_panel"; continue; }
+  p.addEventListener("click", () => onControl(key, bitno));
+  tile.style.cursor = "pointer";
+  tile.addEventListener("click", () => onControl(key, bitno));        // the label tile works like the paddle
+}
+function flash(e) { e.classList.add("flash"); setTimeout(() => e.classList.remove("flash"), 160); }
+const armed = {};
+function arm(key) {
+  if (armed[key]) { clearTimeout(armed[key]); delete armed[key]; ctl[key].classList.remove("armed"); return true; }
+  ctl[key].classList.add("armed");
+  armed[key] = setTimeout(() => { delete armed[key]; ctl[key].classList.remove("armed"); }, 3000);
+  return false;
+}
+function onControl(key, bitno) {
+  if (key === "halt") {
+    if (!halt) { if (!arm("halt")) return; halt = 1; }   // enable -> halt needs a second click
+    else halt = 0;
+    drawHalt(); sendLevels(); return;
+  }
+  if (key === "start" && !arm("start")) return;
+  flash(ctl[key]); send([0x83, 1 << bitno]);
+}
+// ENABLE is up, HALT is down
+function drawHalt() { ctl.halt.classList.toggle("up", !halt); ctl.halt.title = halt ? "HALT" : "ENABLE"; }
+ctl.sinst.classList.add("up");
+
+// ---------------------------------------------------------------- scale to the window
+function fit() {
+  const room = window.innerHeight - $("stage").getBoundingClientRect().top - 90;   // leave the readout and hint visible
+  const w = $("stage").clientWidth, s = Math.min(w / 1600, Math.max(room, 300) / 884);
+  P.style.transform = `scale(${s})`; $("stage").style.height = px(884 * s);
+}
+window.addEventListener("resize", fit);
+
+// ---------------------------------------------------------------- lamps
+function render() {
+  for (let i = 0; i < NL; i++) {
+    if (!lampEls[i]) continue;
+    lampEls[i].style.setProperty("--b", ((lampTest ? 15 : bright[i]) / 15).toFixed(3));
+  }
+  parErrLamp.style.setProperty("--b", ((lampTest ? 15 : Math.max(bright[38], bright[39])) / 15).toFixed(3));
+  if (lampTest) { for (const k in addrLamps) addrLamps[k].style.setProperty("--b", 1); for (const k in dataLamps) dataLamps[k].style.setProperty("--b", 1); }
+  // readout: a bit counts as on if it is at least half bright
+  let a = 0, d = 0;
+  for (let i = 0; i < 22; i++) if (bright[i] >= 8) a += 2 ** i;
+  for (let i = 0; i < 16; i++) if (bright[22 + i] >= 8) d |= 1 << i;
+  const an = addrPos.find(p => p[0] === adss)[1], dn = dataPos.find(p => p[0] === ddss)[1].replace(/<br>/g, " ").replace("&micro;", "µ");
+  $("readout").innerHTML = `ADDRESS <b>${a.toString(8).padStart(8, "0")}</b> (${an}) &nbsp; DATA <b>${d.toString(8).padStart(6, "0")}</b> (${dn}) &nbsp; SWITCHES <b>${sw.toString(8).padStart(8, "0")}</b>`;
+  requestAnimationFrame(render);
+}
+
+// ---------------------------------------------------------------- serial
+// every command ends with a check byte: the xor of the low 7 bits of all bytes
+async function send(bytes) {
+  if (!writer) return;
+  bytes = bytes.concat([bytes.reduce((c, b) => c ^ (b & 0x7f), 0)]);
+  try { await writer.write(new Uint8Array(bytes)); } catch (e) { setState("write error: " + e.message, true); }
+}
+function sendSw() { send([0x81, sw & 0x7f, (sw >> 7) & 0x7f, (sw >> 14) & 0x7f, (sw >> 21) & 1]); }
+function sendLevels() { send([0x82, (adss & 7) | ((ddss & 3) << 3) | (halt << 5)]); }
+function sendAll() { sendSw(); sendLevels(); }
+function setState(t, bad) { $("state").textContent = t; $("state").className = bad ? "err" : ""; }
+
+async function connect() {
+  if (port) { await disconnect(); return; }
+  if (!("serial" in navigator)) { setState("Web Serial is not available: use Chrome or Edge", true); return; }
+  setState("choosing a port\u2026");
+  try {
+    port = await navigator.serial.requestPort({ filters: [{ usbVendorId: 0x0403 }] });
+    await port.open({ baudRate: 115200 });
+  } catch (e) { port = null; setState(e.message, true); return; }
+  writer = port.writable.getWriter();
+  $("dot").classList.add("on"); $("connect").textContent = "Disconnect"; setState("connected");
+  // always start with ENABLE: a HALT left over in the page must not stop the machine on connect
+  halt = 0; drawHalt();
+  demo = false; lineErrors = 0; sendAll();
+  readLoop();
+}
+async function disconnect() {
+  try { if (reader) await reader.cancel(); } catch (e) {}
+  try { if (writer) writer.releaseLock(); } catch (e) {}
+  try { await port.close(); } catch (e) {}
+  port = writer = reader = null;
+  $("dot").classList.remove("on"); $("connect").textContent = "Connect"; setState("not connected");
+}
+async function readLoop() {
+  let idx = -1;                                      // -1: waiting for 0x80
+  const buf = new Uint8Array(NL);
+  while (port && port.readable) {
+    reader = port.readable.getReader();
+    try {
+      for (;;) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        for (const byte of value) {
+          if (byte === 0x80) { idx = 0; continue; }
+          if (idx < 0 || byte > 15) { idx = -1; continue; }
+          buf[idx++] = byte;
+          if (idx === NL) { bright.set(buf); frames++; idx = -1; }
+        }
+      }
+    } catch (e) {
+      // a framing/parity error (e.g. connecting in the middle of a byte) ends this reader;
+      // the loop takes a new one and goes on, so only count it
+      lineErrors++; setState(`connected (${lineErrors} line error${lineErrors > 1 ? "s" : ""}: ${e.message})`);
+    }
+    finally { reader.releaseLock(); reader = null; }
+    if (!port) break;
+  }
+}
+navigator.serial && navigator.serial.addEventListener("disconnect", () => { if (port) disconnect(); });
+
+// resend the levels now and then: after a board reset they are back to the defaults
+setInterval(() => { if (writer) sendAll(); }, 1000);
+setInterval(() => { $("fps").textContent = writer ? frames + " frames/s" : ""; frames = 0; }, 1000);
+
+// ---------------------------------------------------------------- demo, lamp test
+let demoT = 0;
+setInterval(() => {
+  if (!demo) return;
+  demoT++;
+  const pc = 0o1000 + ((demoT * 2) % 0o400);
+  for (let i = 0; i < 22; i++) bright[i] = ((pc >> i) & 1) ? 15 - (i % 3) : ((i + demoT) % 17 === 0 ? 3 : 0);
+  for (let i = 0; i < 16; i++) bright[22 + i] = Math.random() < 0.4 ? Math.floor(Math.random() * 16) : 0;
+  bright[41] = 15; bright[46] = 11; bright[44] = 4; bright[47] = 6; bright[50] = 15; bright[43] = 2;
+}, 60);
+$("demo").onclick = () => { demo = !demo; if (!demo) bright.fill(0); };
+$("lamptest").onmousedown = () => { lampTest = true; };
+window.addEventListener("mouseup", () => { if (lampTest) { lampTest = false; drawKnobs(); } });
+$("clear").onclick = () => { sw = 0; drawSwitches(); sendSw(); };
+$("connect").onclick = connect;
+
+fit(); drawSwitches(); drawHalt(); drawKnobs(); requestAnimationFrame(render);
+setState(("serial" in navigator) ? "not connected (Web Serial available)" : "Web Serial is NOT available in this browser", !("serial" in navigator));
+</script>
+</body>
+</html>
