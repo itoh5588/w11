@@ -56,20 +56,18 @@ a **raw disk image**, not as a FAT file. Its geometry is 630 cylinders,
 1,008,000 sectors or 516,096,000 bytes. Use a dedicated card and verify the
 target device before writing any image.
 
-The development test used a 2.11BSD RP07 image with an FPSIM-enabled kernel.
-The original supplied image required FP11 hardware and did not boot fully on
-this w11 configuration. Neither the original image nor the modified copy is
-distributed here. The source and redistribution terms of an OS image must be
-established separately; this source release alone does not provide a complete
-reader-reproducible OS boot.
+The tested 2.11BSD RP07 image is built in SimH from the TUHS 2.11BSD patch
+level 481 distribution tape only, with a kernel rebuilt for `FPSIM YES`
+because w11 has no FP11. The image is not distributed here; it can be
+rebuilt from the tape. The build steps, hashes and SD card writing procedure
+are in [SD_CARD.md](SD_CARD.md).
 
 With a compatible card inserted, the bootstrap displays
-`70Boot from xp(0,0,0)` after FPGA configuration. Press Enter to load `unix`.
-At the single-user `#` prompt, press Ctrl-D to continue to `login:`. To stop,
-run `sync; sync; halt` and wait for `halting` before resetting or removing
-power. The 2026-09-27 hardware record confirms this sequence using the
-FPSIM-enabled copy; it does not establish a fresh-environment reproduction.
+`70Boot from xp(0,0,0)` after FPGA configuration and boots `unix` after a
+short countdown (press Enter to boot at once). The system checks its file
+systems and continues to multi-user `login:`; log in as `root` (no password).
+To stop, run `sync; sync; halt` and wait for `halting` before resetting or
+removing power. This sequence was confirmed on hardware on 2026-10-04.
 
 Implementation details and test evidence are in
-[the design notes](../../../../Docs/artys7_standalone_rp07_design.md) and
-[the 2026-09-27 worklog](../../../../Docs/Worklogs/2026-09-27.md).
+[the design notes](../../../../Docs/artys7_standalone_rp07_design.md).
