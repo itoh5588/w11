@@ -33,3 +33,6 @@ __pycache__/
 # OS media and hardware backups are kept outside source control
 *.img
 rtl/sys_gen/w11a/artys7_standalone/flash_before_*.bin
+
+# work logs are private notes, not published
+Docs/Worklogs/
