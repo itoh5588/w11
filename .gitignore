@@ -17,3 +17,19 @@
 *.tmp
 *.log
 core
+
+# local FPGA, simulation, and host-tool outputs
+.playwright-mcp/
+tools/lib/
+xsim.dir/
+xvhdl.pb
+*_XSim
+*.bit_keep
+*.mcs
+*.prm
+__pycache__/
+*.pyc
+
+# OS media and hardware backups are kept outside source control
+*.img
+rtl/sys_gen/w11a/artys7_standalone/flash_before_*.bin

@@ -37,7 +37,15 @@ operating systems from provided [oskits](tools/oskit/README.md).
 The current implementation forwards the IO requests from all devices via a
 fast serial connection to a backend server on a PC, which translates these
 requests and maps them to contemporary interfaces.
-True standalone systems are on the project roadmap.
+True standalone systems are on the project roadmap in the upstream project.
+
+### Arty S7 standalone fork
+
+This fork adds a native RP07 disk controller, a local DL11 console and an
+autostart bootstrap for the Arty S7-50. The FPGA can boot from a raw microSD
+card without the PC I/O backend. See the
+[standalone build and operating notes](rtl/sys_gen/w11a/artys7_standalone/README.md).
+The operating-system image used for development is not included.
 
 For more information look into:
 - w11 project [home page](https://wfjm.github.io/home/w11/), especially the
