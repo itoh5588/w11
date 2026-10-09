@@ -49,6 +49,8 @@ The operating-system image used for development is not included.
 
 ![Arty S7-50 standalone setup with a Pmod MicroSD card and serial console wiring](doc/images/IMG_0050.jpg)
 
+*The Pmod MicroSD module at the upper right holds the microSD card containing the 2.11BSD disk image.*
+
 A 2.11BSD console session on the standalone setup:
 
 ![Tera Term showing the 2.11BSD W11TAPE kernel and login prompt on COM5](doc/images/2.11bsd-console-login.png)
