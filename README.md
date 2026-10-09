@@ -49,6 +49,10 @@ The operating-system image used for development is not included.
 
 ![Arty S7-50 standalone setup with a Pmod MicroSD card and serial console wiring](doc/images/IMG_0050.jpg)
 
+A 2.11BSD console session on the standalone setup:
+
+![Tera Term showing the 2.11BSD W11TAPE kernel and login prompt on COM5](doc/images/2.11bsd-console-login.png)
+
 For more information look into:
 - w11 project [home page](https://wfjm.github.io/home/w11/), especially the
   sections on [feature set](https://wfjm.github.io/home/w11/impl/) and
