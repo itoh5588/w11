@@ -47,6 +47,8 @@ card without the PC I/O backend. See the
 [standalone build and operating notes](rtl/sys_gen/w11a/artys7_standalone/README.md).
 The operating-system image used for development is not included.
 
+![Arty S7-50 standalone setup with a Pmod MicroSD card and serial console wiring](doc/images/IMG_0050.jpg)
+
 For more information look into:
 - w11 project [home page](https://wfjm.github.io/home/w11/), especially the
   sections on [feature set](https://wfjm.github.io/home/w11/impl/) and
