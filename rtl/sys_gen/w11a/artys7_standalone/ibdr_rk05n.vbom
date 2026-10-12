@@ -1,0 +1,8 @@
+# Native RK11/RK05 controller on a dedicated raw microSD card
+../../../vlib/slvtypes.vhd
+../../../ibus/iblib.vhd
+sdspi_phy.vhd
+sdspi_ctl.vhd
+sd_dma_wr.vhd
+sd_dma_rd.vhd
+ibdr_rk05n.vhd

@@ -425,6 +425,8 @@ begin
       IB_SRES_RHRP_EXT => IB_SRES_RP,
       EI_REQ_RHRP_EXT  => EI_REQ_RP,
       EI_ACK_RHRP_EXT  => EI_ACK_RP,
+      EI_ACK_RK11_EXT  => open,
+      EI_ACK_RL11_EXT  => open,
       EI_ACKM  => EI_ACKM,
       EI_PRI   => EI_PRI,
       EI_VECT  => EI_VECT,

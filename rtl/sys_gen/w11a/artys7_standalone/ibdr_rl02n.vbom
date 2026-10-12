@@ -1,0 +1,5 @@
+sdspi_ctl.vhd
+sdspi_phy.vhd
+sd_dma_wr.vhd
+sd_dma_rd.vhd
+ibdr_rl02n.vhd

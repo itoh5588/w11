@@ -1,0 +1,9 @@
+; Unix Sixth Edition, RK05. The disk copy has DC11 lines disabled in /etc/ttys.
+do ../../simh/setup_w11a_min.scmd
+set tto 7b
+set dlo0 7b
+att rk0 u6ed_rk0.dsk
+att rk1 u6ed_rk1.dsk
+att rk2 u6ed_rk2.dsk
+d sr 1
+boo rk0

@@ -1,0 +1,7 @@
+# libs
+../../../vlib/slvtypes.vhd
+# components
+sdspi_phy.vhd
+sdspi_ctl.vhd
+# design
+sd_label_probe.vhd

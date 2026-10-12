@@ -41,6 +41,7 @@ Several oskits are provided:
 | oskit Name  |  OS  | Disk/Tape| Comment |
 | :---- | :----| :------  | :------ |
 | [u5ed_rk](../tools/oskit/u5ed_rk) | Unix 5th Ed. System  | RK05 | |
+| [u6ed_rk](../tools/oskit/u6ed_rk) | Unix 6th Ed. System  | RK05 | Local image copy; DC11 lines disabled in `/etc/ttys` |
 | [u7ed_rp](../tools/oskit/u7ed_rp) | Unix 7th Ed. System  | RP04 | _very preliminary, port to w11a in progress_|
 | [211bsd_rk](../tools/oskit/211bsd_rk)  | 2.11BSD system  | RK05 | _very elementary subset_ |
 | [211bsd_rl](../tools/oskit/211bsd_rl)  | 2.11BSD system  | RL02 | _small subset_ |

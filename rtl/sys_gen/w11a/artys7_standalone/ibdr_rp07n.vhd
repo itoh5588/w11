@@ -59,6 +59,7 @@ entity ibdr_rp07n is
     O_SD_MOSI : out slbit;
     I_SD_MISO : in slbit;
     I_SD_CD : in slbit;                 -- card detect, 0 = card present
+    BASE : in slv32 := (others => '0'); -- first SD LBA of the disk data
     DMA_REQ : out slbit;
     DMA_WE : out slbit;
     DMA_BUSY : in slbit;
@@ -222,6 +223,7 @@ architecture syn of ibdr_rp07n is
   signal SD_OP : slv3 := (others => '0');
   signal SD_GO : slbit := '0';
   signal SD_LBA : slv32 := (others => '0');
+  signal SD_LBA_ABS : slv32 := (others => '0');
   signal SD_NBLK : slv16 := (others => '0');
   signal SD_HOLD : slbit := '0';
   signal SD_ABORT : slbit := '0';
@@ -261,10 +263,12 @@ architecture syn of ibdr_rp07n is
 
 begin
 
+  SD_LBA_ABS <= slv(unsigned(SD_LBA) + unsigned(BASE));
+
   CTL : entity work.sdspi_ctl
     port map (
       CLK => CLK, RESET => RESET, CE_MSEC => CE_MSEC,
-      OP => SD_OP, GO => SD_GO, LBA => SD_LBA, NBLK => SD_NBLK,
+      OP => SD_OP, GO => SD_GO, LBA => SD_LBA_ABS, NBLK => SD_NBLK,
       HOLD => SD_HOLD, ABORT => SD_ABORT, FASTDIV => x"02",
       BUSY => SD_BUSY, INITOK => SD_INITOK, V2 => open, HC => open,
       ERR => SD_ERR, R1 => open, TOKEN => open, RESP => open,

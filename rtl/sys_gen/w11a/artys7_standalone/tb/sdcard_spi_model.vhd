@@ -15,6 +15,9 @@
 --       5 SDHC rejecting write data (CRC error 0x0b), 6 SDHC with a write
 --       error (data response 0x0d, CMD13 status 0x04).
 -- Block data: byte i of block L is (L*37 + i) mod 256 xor 0x55*(i/256).
+-- LBL_TYPE: 0 as above; 1..3 block 0 holds a w11 card label (sd_label_probe)
+--        of disk type LBL_TYPE, first data LBA 0x00012345, RL02 mask 0001,
+--        present mask 0011; 9 the same label with the wrong version 2.
 
 library ieee;
 use ieee.std_logic_1164.all;
@@ -25,6 +28,7 @@ use work.slvtypes.all;
 entity sdcard_spi_model is
   port (
     MODE : in natural;
+    LBL_TYPE : in natural := 0;
     CS_N : in slbit;
     SCLK : in slbit;
     MOSI : in slbit;
@@ -104,12 +108,26 @@ begin
 
     impure function blkbyte(l : natural; i : natural) return slv8 is
       variable v : slv8;
+      constant lbl : byte_array(0 to 19) := (
+        x"57", x"31", x"31", x"53", x"44", x"4c", x"42", x"4c",
+        x"01", x"00", x"00", x"00", x"45", x"23", x"01", x"00",
+        x"01", x"00", x"03", x"00");
     begin
       for k in 0 to 31 loop               -- written blocks first
         if tags(k) = l then
           return store(k)(i);
         end if;
       end loop;
+      if l = 0 and LBL_TYPE /= 0 then
+        if i = 8 and LBL_TYPE = 9 then
+          return x"02";
+        elsif i = 10 then
+          return slv(to_unsigned(LBL_TYPE mod 8, 8));
+        elsif i <= lbl'high then
+          return lbl(i);
+        end if;
+        return x"00";
+      end if;
       v := slv(to_unsigned((l * 37 + i) mod 256, 8));
       if i >= 256 then
         v := v xor x"55";

@@ -1,11 +1,18 @@
 -- SPDX-License-Identifier: GPL-3.0-or-later
 --
--- Arty S7 w11a, standalone candidate: native RP07 on the microSD card in JD
--- (write enabled) and the console DL11 (177560) as a native DL11 on the
--- 3.3 V serial cable in JC (9600 8N1).  The RP07 bootstrap is loaded and
--- started by w11_autostart 2 s after configuration and on BTN3; rlink stays
--- for debugging only.
--- Derived from sys_w11a_sa_as7.
+-- Arty S7 w11a, standalone: native disk on the microSD card in JD (write
+-- enabled) and the console DL11 (177560) as a native DL11 on the 3.3 V
+-- serial cable in JC (9600 8N1).  rlink stays for debugging only.
+--
+-- One bitstream for all standalone cards: the RH70/RP07, RK11/RK05 and
+-- RL11/RL01/RL02 controllers are all built in.  sd_label_probe reads the
+-- label in block 0 of the card (see tools/oskit/sd_label.py) and selects one
+-- controller, its first data LBA and the RL drive masks; a card without a
+-- label is an RP07 card with the disk at LBA 0.  The other two controllers
+-- are held in reset, so they do not answer on the ibus.  w11_autostart then
+-- loads and starts the bootstrap of the selected disk 2 s after
+-- configuration.  BTN3 probes the card again and reboots, so a card can be
+-- changed without a new configuration.
 --
 -- Front panel (w11_panel): SW3 = 1 gives the on-board USB-UART to a PDP-11/70
 -- panel drawn on the host (tcode/panel.html, 115200 bps) instead of rlink;
@@ -165,7 +172,7 @@ architecture syn of sys_w11a_sa_as7 is
   signal PP_ADDR   : slv20 := (others=>'0');
   signal PP_BE     : slv4  := (others=>'0');
   signal PP_DI     : slv32 := (others=>'0');
-  signal SD_REQ    : slbit := '0';       -- RP07 controller DMA
+  signal SD_REQ    : slbit := '0';       -- selected disk controller DMA
   signal SD_WE     : slbit := '0';
   signal SD_BUSY   : slbit := '0';
   signal SD_ACK_R  : slbit := '0';
@@ -173,6 +180,39 @@ architecture syn of sys_w11a_sa_as7 is
   signal SD_ADDR   : slv20 := (others=>'0');
   signal SD_BE     : slv4  := (others=>'0');
   signal SD_DI     : slv32 := (others=>'0');
+  signal PR_START  : slbit := '0';       -- sd_label_probe
+  signal PR_ACTIVE : slbit := '1';
+  signal PR_READY  : slbit := '0';
+  signal PR_DONE   : slbit := '0';
+  signal PR_SEL    : slv2  := "00";
+  signal PR_BASE   : slv32 := (others=>'0');
+  signal PR_RL02   : slv4  := (others=>'1');
+  signal PR_PRESENT: slv4  := (others=>'1');
+  signal PR_CS_N   : slbit := '1';
+  signal PR_SCLK   : slbit := '0';
+  signal PR_MOSI   : slbit := '1';
+  signal SD_OWN    : slv2  := "11";      -- SD pins: "11" probe, else PR_SEL
+  signal CTL_RESET_RP : slbit := '1';    -- unselected controllers in reset
+  signal CTL_RESET_RK : slbit := '1';
+  signal CTL_RESET_RL : slbit := '1';
+  type sd_pins_type is array (0 to 2) of slv3;  -- cs_n, sclk, mosi
+  signal SD_PINS   : sd_pins_type := (others=>"100");
+  type sd_dma_type is record
+    req : slbit;
+    we : slbit;
+    addr : slv20;
+    be : slv4;
+    di : slv32;
+  end record sd_dma_type;
+  type sd_dma_array is array (0 to 2) of sd_dma_type;
+  signal SD_DMA    : sd_dma_array :=
+    (others=>('0', '0', (others=>'0'), (others=>'0'), (others=>'0')));
+  signal IB_SRES_RK : ib_sres_type := ib_sres_init;
+  signal EI_REQ_RK : slbit := '0';
+  signal EI_ACK_RK : slbit := '0';
+  signal IB_SRES_RL : ib_sres_type := ib_sres_init;
+  signal EI_REQ_RL : slbit := '0';
+  signal EI_ACK_RL : slbit := '0';
   signal MEM_ACT_R : slbit := '0';
   signal MEM_ACT_W : slbit := '0';
   signal MEM_ADDR  : slv20 := (others=>'0');
@@ -325,7 +365,9 @@ begin
       CLK     => CLK,
       RESET   => GBL_RESET,
       CE_MSEC => CE_MSEC,
-      START   => AS_START,
+      START   => PR_DONE,
+      BOOT    => PR_SEL,
+      READY   => PR_READY,
       ACTIVE  => AS_ACTIVE,
       RB_MREQ => RB_MREQ_AS,
       RB_SRES => RB_SRES
@@ -338,7 +380,9 @@ begin
     end if;
   end process proc_btn3;
 
+  -- BTN3: probe the card again, the new bootstrap follows PR_DONE
   AS_START <= BTN(3) and not BTN3_R;
+  PR_START <= AS_START;
   RB_MREQ <= RB_MREQ_AS when AS_ACTIVE = '1' else
              RB_MREQ_PN when PN_ACTIVE = '1' else
              RB_MREQ_RL;
@@ -484,12 +528,74 @@ begin
       DMA_DI      => DMA_DI
     );
 
+  PROBE : entity work.sd_label_probe    -- card label: which disk --------
+    port map (
+      CLK          => CLK,
+      RESET        => GBL_RESET,
+      CE_MSEC      => CE_MSEC,
+      START        => PR_START,
+      ACTIVE       => PR_ACTIVE,
+      READY        => PR_READY,
+      DONE         => PR_DONE,
+      LABELED      => open,
+      SEL          => PR_SEL,
+      BASE         => PR_BASE,
+      RL02_MASK    => PR_RL02,
+      PRESENT_MASK => PR_PRESENT,
+      O_SD_CS_N    => PR_CS_N,
+      O_SD_SCLK    => PR_SCLK,
+      O_SD_MOSI    => PR_MOSI,
+      I_SD_MISO    => I_SD_MISO
+    );
+
+  proc_sdsel: process (CLK)
+  begin
+    if rising_edge(CLK) then
+      SD_OWN <= "11";
+      CTL_RESET_RP <= '1';
+      CTL_RESET_RK <= '1';
+      CTL_RESET_RL <= '1';
+      if GBL_RESET = '0' and PR_ACTIVE = '0' then
+        SD_OWN <= PR_SEL;
+        case PR_SEL is
+          when "00"   => CTL_RESET_RP <= '0';
+          when "01"   => CTL_RESET_RK <= '0';
+          when "10"   => CTL_RESET_RL <= '0';
+          when others => null;
+        end case;
+      end if;
+    end if;
+  end process proc_sdsel;
+
+  proc_sdmux: process (SD_OWN, PR_CS_N, PR_SCLK, PR_MOSI, SD_PINS, SD_DMA)
+    variable pins : slv3;
+    variable dma : sd_dma_type;
+  begin
+    case SD_OWN is
+      when "00"   => pins := SD_PINS(0); dma := SD_DMA(0);
+      when "01"   => pins := SD_PINS(1); dma := SD_DMA(1);
+      when "10"   => pins := SD_PINS(2); dma := SD_DMA(2);
+      when others =>
+        pins := PR_CS_N & PR_SCLK & PR_MOSI;
+        dma := SD_DMA(0);
+        dma.req := '0';
+    end case;
+    O_SD_CS_N <= pins(2);
+    O_SD_SCLK <= pins(1);
+    O_SD_MOSI <= pins(0);
+    SD_REQ  <= dma.req;
+    SD_WE   <= dma.we;
+    SD_ADDR <= dma.addr;
+    SD_BE   <= dma.be;
+    SD_DI   <= dma.di;
+  end process proc_sdmux;
+
   RP07 : entity work.ibdr_rp07n           -- native RH70/RP07 on microSD --
     generic map (
       WRITE_ENABLE => true)
     port map (
       CLK         => CLK,
-      RESET       => GBL_RESET,
+      RESET       => CTL_RESET_RP,
       CE_USEC     => CE_USEC,
       CE_MSEC     => CE_MSEC,
       BRESET      => BRESET,
@@ -498,22 +604,87 @@ begin
       IB_SRES     => IB_SRES_RP,
       EI_REQ      => EI_REQ_RP,
       EI_ACK      => EI_ACK_RP,
-      O_SD_CS_N   => O_SD_CS_N,
-      O_SD_SCLK   => O_SD_SCLK,
-      O_SD_MOSI   => O_SD_MOSI,
+      O_SD_CS_N   => SD_PINS(0)(2),
+      O_SD_SCLK   => SD_PINS(0)(1),
+      O_SD_MOSI   => SD_PINS(0)(0),
       I_SD_MISO   => I_SD_MISO,
       I_SD_CD     => I_SD_CD,
-      DMA_REQ     => SD_REQ,
-      DMA_WE      => SD_WE,
+      BASE        => PR_BASE,
+      DMA_REQ     => SD_DMA(0).req,
+      DMA_WE      => SD_DMA(0).we,
       DMA_BUSY    => SD_BUSY,
       DMA_ACK_R   => SD_ACK_R,
       DMA_ACK_W   => SD_ACK_W,
-      DMA_ADDR    => SD_ADDR,
-      DMA_BE      => SD_BE,
-      DMA_DI      => SD_DI,
+      DMA_ADDR    => SD_DMA(0).addr,
+      DMA_BE      => SD_DMA(0).be,
+      DMA_DI      => SD_DMA(0).di,
       DMA_DO      => DMA_DO,
       SDERR       => open,
       XCOUNT      => open
+    );
+
+  RK05 : entity work.ibdr_rk05n           -- native RK11/RK05 on microSD --
+    generic map (
+      WRITE_ENABLE => true)
+    port map (
+      CLK         => CLK,
+      RESET       => CTL_RESET_RK,
+      CE_MSEC     => CE_MSEC,
+      BRESET      => BRESET,
+      IB_MREQ     => IB_MREQ,
+      IB_SRES     => IB_SRES_RK,
+      EI_REQ      => EI_REQ_RK,
+      EI_ACK      => EI_ACK_RK,
+      O_SD_CS_N   => SD_PINS(1)(2),
+      O_SD_SCLK   => SD_PINS(1)(1),
+      O_SD_MOSI   => SD_PINS(1)(0),
+      I_SD_MISO   => I_SD_MISO,
+      I_SD_CD     => I_SD_CD,
+      BASE        => PR_BASE,
+      DMA_REQ     => SD_DMA(1).req,
+      DMA_WE      => SD_DMA(1).we,
+      DMA_BUSY    => SD_BUSY,
+      DMA_ACK_R   => SD_ACK_R,
+      DMA_ACK_W   => SD_ACK_W,
+      DMA_ADDR    => SD_DMA(1).addr,
+      DMA_BE      => SD_DMA(1).be,
+      DMA_DI      => SD_DMA(1).di,
+      DMA_DO      => DMA_DO,
+      SDERR       => open,
+      XCOUNT      => open
+    );
+
+  RL01_02 : entity work.ibdr_rl02n        -- native RL11/RL0x on microSD --
+    generic map (
+      WRITE_ENABLE => true)
+    port map (
+      CLK          => CLK,
+      RESET        => CTL_RESET_RL,
+      CE_MSEC      => CE_MSEC,
+      BRESET       => BRESET,
+      IB_MREQ      => IB_MREQ,
+      IB_SRES      => IB_SRES_RL,
+      EI_REQ       => EI_REQ_RL,
+      EI_ACK       => EI_ACK_RL,
+      O_SD_CS_N    => SD_PINS(2)(2),
+      O_SD_SCLK    => SD_PINS(2)(1),
+      O_SD_MOSI    => SD_PINS(2)(0),
+      I_SD_MISO    => I_SD_MISO,
+      I_SD_CD      => I_SD_CD,
+      BASE         => PR_BASE,
+      RL02_MASK    => PR_RL02,
+      PRESENT_MASK => PR_PRESENT,
+      DMA_REQ      => SD_DMA(2).req,
+      DMA_WE       => SD_DMA(2).we,
+      DMA_BUSY     => SD_BUSY,
+      DMA_ACK_R    => SD_ACK_R,
+      DMA_ACK_W    => SD_ACK_W,
+      DMA_ADDR     => SD_DMA(2).addr,
+      DMA_BE       => SD_DMA(2).be,
+      DMA_DI       => SD_DMA(2).di,
+      DMA_DO       => DMA_DO,
+      SDERR        => open,
+      XCOUNT       => open
     );
 
   TTA : entity work.ibd_dl11n            -- native console DL11 (JC) --------
@@ -535,7 +706,9 @@ begin
 
   IBDR_SYS : entity work.ibdr_maxisys_sa -- IO system, RHRP, DL11 outside --
     generic map (
-      EXT_DL0  => true)
+      EXT_DL0  => true,
+      EXT_RK11 => true,
+      EXT_RL11 => true)
     port map (
       CLK      => CLK,
       CE_USEC  => CE_USEC,
@@ -551,6 +724,12 @@ begin
       IB_SRES_RHRP_EXT => IB_SRES_RP,
       EI_REQ_RHRP_EXT  => EI_REQ_RP,
       EI_ACK_RHRP_EXT  => EI_ACK_RP,
+      IB_SRES_RK11_EXT => IB_SRES_RK,
+      EI_REQ_RK11_EXT  => EI_REQ_RK,
+      EI_ACK_RK11_EXT  => EI_ACK_RK,
+      IB_SRES_RL11_EXT => IB_SRES_RL,
+      EI_REQ_RL11_EXT  => EI_REQ_RL,
+      EI_ACK_RL11_EXT  => EI_ACK_RL,
       IB_SRES_DL0_EXT  => IB_SRES_TT,
       EI_REQ_DL0RX_EXT => EI_REQ_TTRX,
       EI_REQ_DL0TX_EXT => EI_REQ_TTTX,

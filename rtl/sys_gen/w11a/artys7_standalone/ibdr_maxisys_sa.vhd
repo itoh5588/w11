@@ -20,7 +20,9 @@ use work.sys_conf.all;
 -- ----------------------------------------------------------------------------
 entity ibdr_maxisys_sa is               -- ibus(rem) full system, ext RHRP
   generic (
-    EXT_DL0 : boolean := false);        -- 1st DL11 outside (native console)
+    EXT_DL0 : boolean := false;         -- 1st DL11 outside (native console)
+    EXT_RK11 : boolean := false;        -- RK11 outside (native microSD)
+    EXT_RL11 : boolean := false);       -- RL11 outside (native microSD)
   port (
     CLK : in slbit;                     -- clock
     CE_USEC : in slbit;                 -- usec pulse
@@ -36,6 +38,12 @@ entity ibdr_maxisys_sa is               -- ibus(rem) full system, ext RHRP
     IB_SRES_RHRP_EXT : in ib_sres_type; -- external RHRP: ibus response
     EI_REQ_RHRP_EXT : in slbit;         -- external RHRP: interrupt request
     EI_ACK_RHRP_EXT : out slbit;        -- external RHRP: interrupt ack
+    IB_SRES_RK11_EXT : in ib_sres_type := ib_sres_init;
+    EI_REQ_RK11_EXT : in slbit := '0';
+    EI_ACK_RK11_EXT : out slbit;
+    IB_SRES_RL11_EXT : in ib_sres_type := ib_sres_init;
+    EI_REQ_RL11_EXT : in slbit := '0';
+    EI_ACK_RL11_EXT : out slbit;
     IB_SRES_DL0_EXT : in ib_sres_type := ib_sres_init; -- ext 1st DL11
     EI_REQ_DL0RX_EXT : in slbit := '0';
     EI_REQ_DL0TX_EXT : in slbit := '0';
@@ -243,7 +251,7 @@ begin
   EI_REQ_RHRP <= EI_REQ_RHRP_EXT;
   EI_ACK_RHRP_EXT <= EI_ACK_RHRP;
 
-  RL11: if sys_conf_ibd_rl11 generate
+  RL11: if sys_conf_ibd_rl11 and not EXT_RL11 generate
   begin
     RLA : ibdr_rl11
       port map (
@@ -258,7 +266,14 @@ begin
       );
   end generate RL11;
 
-  RK11: if sys_conf_ibd_rk11 generate
+  RL11_NATIVE: if EXT_RL11 generate
+  begin
+    IB_SRES_RL11 <= IB_SRES_RL11_EXT;
+    EI_REQ_RL11 <= EI_REQ_RL11_EXT;
+  end generate RL11_NATIVE;
+  EI_ACK_RL11_EXT <= EI_ACK_RL11;
+
+  RK11: if sys_conf_ibd_rk11 and not EXT_RK11 generate
   begin
     RKA : ibdr_rk11
       port map (
@@ -272,6 +287,13 @@ begin
         EI_ACK  => EI_ACK_RK11
       );
   end generate RK11;
+
+  RK11_NATIVE: if EXT_RK11 generate
+  begin
+    IB_SRES_RK11 <= IB_SRES_RK11_EXT;
+    EI_REQ_RK11 <= EI_REQ_RK11_EXT;
+  end generate RK11_NATIVE;
+  EI_ACK_RK11_EXT <= EI_ACK_RK11;
 
   TM11: if sys_conf_ibd_tm11 generate
   begin
