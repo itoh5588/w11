@@ -6,6 +6,13 @@ image is exactly 1,008,000 sectors of 512 bytes (516,096,000 bytes). Use a
 dedicated card with at least that capacity. The first 516,096,000 bytes of the
 card will be overwritten.
 
+The standalone bitstream also accepts RK05 and RL cards, selected by a card
+label in block 0 (see [Select the disk](README.md#select-the-disk)). An RP07
+card needs **no label**: a card without one is read as an RP07 disk from
+sector 0. This page writes the 2.11BSD image that way. If you label an RP07
+image with `tools/oskit/sd_label.py --type rp07`, the disk data moves to
+LBA 2048 and the sizes and hashes below no longer apply to the card.
+
 ## Image used for the hardware test
 
 The tested image `rp07_w11_tape481_fpsim.img` was built in SimH from the
@@ -138,4 +145,6 @@ board. That write used `bs=1M` and skipped the backup step. Repeat the
 readback check for every new card.
 
 After inserting a verified card into the Pmod MicroSD on JD, follow the
-[standalone boot instructions](README.md#os-media-and-boot).
+[standalone boot instructions](README.md#os-media-and-boot). On 2026-10-13 the
+same unlabeled card also booted to multi-user `login:` with the label-select
+bitstream.

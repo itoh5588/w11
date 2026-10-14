@@ -41,9 +41,10 @@ True standalone systems are on the project roadmap in the upstream project.
 
 ### Arty S7 standalone fork
 
-This fork adds a native RP07 disk controller, a local DL11 console and an
-autostart bootstrap for the Arty S7-50. The FPGA can boot from a raw microSD
-card without the PC I/O backend. See the
+This fork adds native RP07, RK05 and RL01/RL02 disk controllers, a local DL11
+console and an autostart bootstrap for the Arty S7-50. One bitstream selects
+the disk from a label on the microSD card, so the FPGA can boot 2.11BSD or
+Unix V6 from a raw card without the PC I/O backend. See the
 [standalone build and operating notes](rtl/sys_gen/w11a/artys7_standalone/README.md).
 The operating-system image used for development is not included.
 
