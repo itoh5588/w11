@@ -122,10 +122,17 @@ With a labeled RK05 card, the V6 bootstrap prints `@`; enter `unix` to reach
 | 2026-10-13 | this revision, JTAG | 2.11BSD RP07, unlabeled | multi-user `login:`; RK11 and RL11 reported as `No CSR` |
 | 2026-10-13 | this revision, JTAG | Unix V6 RK05, labeled | `@unix` reached `login:` |
 | 2026-10-13 | this revision, flash | — | programmed and verified; `DONE` after `boot_hw_device` |
+| 2026-10-15 | this revision, flash | 2.11BSD RP07, unlabeled | file writes to `/` and `/usr`, `halt`, BTN3 reboot, `cmp` and `sum` readback, single-user `fsck -n` on `rxp0a` and `rxp0c` without errors |
+| 2026-10-15 | this revision, flash | Unix V6 RK05, labeled | cold power-on to `login:`; file writes to RK0 and RK1, `sync`, BTN3 reboot, `cmp` and `sum` readback; `icheck`/`dcheck` clean on RK1 and RK2 |
+| 2026-10-16 | this revision, flash | both cards | card exchange with BTN3 only, V6 to 2.11BSD and 2.11BSD to V6 |
+| 2026-10-16 | this revision, flash | 2.11BSD RP07, unlabeled | cold power-on to multi-user `login:` with no button pressed |
 
-Not yet tested with this revision: login and file writes on 2.11BSD, card
-exchange with BTN3, a cold power-on boot from flash, and any RL card on
-hardware.
+On the V6 RK0 volume, `icheck` reports block 2683 as a duplicate and 11
+missing blocks, and `dcheck` reports link count mismatches. The same
+findings are already in `u6ed_rk0.dsk` from the SimH kit, before any
+hardware run; RK0 has not been repaired.
+
+Not yet tested with this revision: any RL card on hardware.
 
 ## Front panel
 
