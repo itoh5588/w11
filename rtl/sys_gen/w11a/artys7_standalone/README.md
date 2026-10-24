@@ -93,7 +93,7 @@ BTN3 はカードを調べ直して起動をやり直すので、FPGA を構成�
   516,096,000 バイトです。試験したイメージは、TUHS の 2.11BSD パッチレベル 481 の
   配布テープだけから SimH で作り、w11 に FP11 がないため `FPSIM YES` で
   カーネルを作り直したものです。ラベルなしで使います。作り方、ハッシュ、
-  カードへの書き方は [SD_CARD.md](SD_CARD.md)（英語）にあります。同じ手順で作った
+  カードへの書き方は [SD_CARD.md](SD_CARD.md)にあります。同じ手順で作った
   イメージは [Release book-v1](https://github.com/itoh5588/w11/releases/tag/book-v1)
   で配布しています。
 - **RK05 上の第6版 UNIX。** [u6ed_rk](../../../../tools/oskit/u6ed_rk/README.md)（英語）

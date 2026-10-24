@@ -47,7 +47,7 @@ PowerShell・sh・Tcl のスクリプトがあります。一覧と、それぞ�
 
 - [単体動作版のビルドと操作の手引き](rtl/sys_gen/w11a/artys7_standalone/README.md)：
   ハードウェアの構成、ビルド、ディスクの選び方、フロントパネル
-- [SD_CARD.md](rtl/sys_gen/w11a/artys7_standalone/SD_CARD.md)（英語）：
+- [SD_CARD.md](rtl/sys_gen/w11a/artys7_standalone/SD_CARD.md)：
   microSD イメージの作り方と配置
 - [RP07 設計メモ](Docs/artys7_standalone_rp07_design.md)（日本語）：
   装置レジスタ、ディスクと SD の対応、試験の記録

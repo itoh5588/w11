@@ -1,23 +1,24 @@
-# Prepare an RP07 microSD card
+# RP07 の microSD カードを用意する
 
-The standalone controller reads a raw RP07 disk starting at sector 0 of the
-card. It does not read a file from a FAT or exFAT partition. The required disk
-image is exactly 1,008,000 sectors of 512 bytes (516,096,000 bytes). Use a
-dedicated card with at least that capacity. The first 516,096,000 bytes of the
-card will be overwritten.
+日本語 | [English](SD_CARD.en.md)
 
-The standalone bitstream also accepts RK05 and RL cards, selected by a card
-label in block 0 (see [Select the disk](README.en.md#select-the-disk)). An RP07
-card needs **no label**: a card without one is read as an RP07 disk from
-sector 0. This page writes the 2.11BSD image that way. If you label an RP07
-image with `tools/oskit/sd_label.py --type rp07`, the disk data moves to
-LBA 2048 and the sizes and hashes below no longer apply to the card.
+単体動作版の制御回路は、カードのセクタ 0 から始まる raw の RP07 ディスクを読みます。
+FAT や exFAT の区画にあるファイルは読みません。必要なディスクイメージは、512 バイトの
+セクタがちょうど 1,008,000 個（516,096,000 バイト）です。この容量以上の専用カードを
+使ってください。カードの先頭 516,096,000 バイトは上書きされます。
 
-## Image used for the hardware test
+単体動作版の回路データは RK05 と RL のカードも受け付け、ブロック 0 のカードラベルで
+選びます（[ディスクを選ぶ](README.md#ディスクを選ぶ)を参照）。RP07 のカードには
+**ラベルは要りません**。ラベルのないカードは、セクタ 0 からの RP07 ディスクとして
+読まれます。このページでは、2.11BSD のイメージをその形で書きます。
+`tools/oskit/sd_label.py --type rp07` で RP07 のイメージにラベルを付けると、ディスクの
+データは LBA 2048 に移り、以下のサイズとハッシュはカードに当てはまらなくなります。
 
-The tested image `rp07_w11_tape481_fpsim.img` was built in SimH from the
-2.11BSD patch level 481 distribution tape published by TUHS. No other disk
-image was used as input.
+## 実機試験に使ったイメージ
+
+試験したイメージ `rp07_w11_tape481_fpsim.img` は、TUHS が公開している 2.11BSD
+パッチレベル 481 の配布テープから SimH で作りました。ほかのディスクイメージは
+入力に使っていません。
 
 ```text
 tape:   https://www.tuhs.org/Archive/Distributions/UCB/2BSD/2.11BSD-patch481/2.11BSD-481-simh-dist.tap
@@ -25,29 +26,28 @@ size:   89762312 bytes
 SHA256: 314ca00f6e0fa8d60ad4cded15ac105f7f1a9f30d6d9e17a2a60a3e47748b821
 ```
 
-Build steps (SimH V3.8-1 `pdp11`, `set cpu 11/70`, `set cpu 4M`, an empty
-RP07 attached as `rp0`, the tape on `ts0`, `boot ts0`):
+作成の手順（SimH V3.8-1 の `pdp11`、`set cpu 11/70`、`set cpu 4M`、空の RP07 を `rp0`
+に、テープを `ts0` に付け、`boot ts0`）：
 
-1. Run the standalone `disklabel` (`ts(0,1)`) on `xp(0,0)` and write an RP07
-   label: 50 sectors, 32 tracks, 630 cylinders, partition `a` 32,000 sectors
-   at 0 (root), `b` 51,200 at 32,000 (swap), `c` 924,800 at 83,200 (`/usr`).
-2. Run the standalone `mkfs` (`ts(0,2)`) on `xp(0,0)`, then `restor`
-   (`ts(0,3)`) from `ts(0,5)` to `xp(0,0)`.
-3. Boot `xp(0,0)unix` (the distribution kernel), `newfs xp0c`, mount it on
-   `/usr` and extract the tape's `/usr` and `/usr/src` tar files (tape files
-   6, 7 and 8) with `tar xpbf 20 /dev/rmt12`.
-4. Copy `conf/GENERIC` to `W11TAPE` with `PDP11 70`, `IDENT W11TAPE` and
-   `FPSIM YES`, run `./config W11TAPE` and `make`, and install the result as
-   `/unix` (the distribution kernel is kept as `/unix.dist`).
-5. Write `/mdec/rp07uboot` to the first block of `/dev/rxp0a`, set
-   `/etc/fstab` to `xp0a` (`/`), `xp0b` (swap) and `xp0c` (`/usr`), and
-   relink `/dev/swap` and `/dev/drum` to `/dev/xp0b` (the distribution links
-   them to `ra0b`).
-6. Shut down cleanly with `sync; sync; halt`, then extend the file with zeros
-   to the full RP07 size.
+1. スタンドアロンの `disklabel`（`ts(0,1)`）を `xp(0,0)` に対して実行し、RP07 の
+   ラベルを書きます。50 セクタ、32 トラック、630 シリンダ、区画 `a` は 0 から
+   32,000 セクタ（ルート）、`b` は 32,000 から 51,200（スワップ）、`c` は 83,200 から
+   924,800（`/usr`）です。
+2. スタンドアロンの `mkfs`（`ts(0,2)`）を `xp(0,0)` に対して実行し、続いて `restor`
+   （`ts(0,3)`）で `ts(0,5)` から `xp(0,0)` へ復元します。
+3. `xp(0,0)unix`（配布カーネル）を起動し、`newfs xp0c` を実行して `/usr` に
+   マウントし、テープの `/usr` と `/usr/src` の tar ファイル（テープのファイル 6、7、8）を
+   `tar xpbf 20 /dev/rmt12` で展開します。
+4. `conf/GENERIC` を `PDP11 70`、`IDENT W11TAPE`、`FPSIM YES` にして `W11TAPE` に
+   写し、`./config W11TAPE` と `make` を実行して、できたカーネルを `/unix` として
+   置きます（配布カーネルは `/unix.dist` として残します）。
+5. `/mdec/rp07uboot` を `/dev/rxp0a` の先頭ブロックに書き、`/etc/fstab` を `xp0a`（`/`）、
+   `xp0b`（スワップ）、`xp0c`（`/usr`）にして、`/dev/swap` と `/dev/drum` を
+   `/dev/xp0b` へリンクし直します（配布状態では `ra0b` へのリンクです）。
+6. `sync; sync; halt` で正常に停止し、ファイルを RP07 の全容量まで 0 で伸ばします。
 
-The result boots to multi-user `login:` in SimH with `set cpu nofpp` and on
-this w11 configuration; floating-point programs run through FPSIM.
+できたイメージは、SimH の `set cpu nofpp` でも、この w11 の構成でもマルチユーザーの
+`login:` まで起動します。浮動小数点のプログラムは FPSIM で動きます。
 
 ```text
 image:   rp07_w11_tape481_fpsim.img
@@ -57,49 +57,48 @@ archive: rp07_w11_tape481_fpsim.img.xz, 20639532 bytes
 SHA256:  fd3860d977d0f6b7073806e00b6bc288676ae12eca84f03924e2779e915b745c
 ```
 
-The image is not distributed here. An image rebuilt by the steps above will
-work but will not have the same hash (time stamps differ). If you obtain the
-archive above, unpack it with `xz -dk` and verify the raw image hash before
-writing a card. Do not use the upstream `211bsd_rp` oskit's RP06 image as an
-RP07 image.
+上の圧縮イメージは [Release book-v1](https://github.com/itoh5588/w11/releases/tag/book-v1)
+に添付しています。上の手順で作り直したイメージも動きますが、時刻などが違うので
+ハッシュは同じになりません。圧縮イメージを使う場合は `xz -dk` で展開し、カードに書く前に
+raw イメージのハッシュを確かめてください。公開元の `211bsd_rp` oskit の RP06 イメージを
+RP07 のイメージとして使わないでください。
 
-## Identify the card reader
+## カードリーダーを特定する
 
-The commands below run on Linux or WSL 2. On Windows with WSL 2, connect the
-**USB card reader**, not the Arty S7 USB/JTAG device, to WSL. In an
-Administrator PowerShell, find the reader's current bus ID and share it:
+以下のコマンドは Linux または WSL 2 で実行します。Windows の WSL 2 では、Arty S7 の
+USB/JTAG ではなく **USB カードリーダー**を WSL につなぎます。管理者の PowerShell で
+リーダーの現在のバス ID を調べ、共有します。
 
 ```powershell
 usbipd list
 usbipd bind --busid <READER-BUSID>
 ```
 
-In a regular PowerShell, attach the reader while a WSL terminal is open:
+WSL の端末を開いた状態で、通常の PowerShell からリーダーを WSL につなぎます。
 
 ```powershell
 usbipd attach --wsl --busid <READER-BUSID>
 ```
 
-In WSL, insert the dedicated card and identify its **whole disk**. The
-`/dev/sdX` name is an example; it can change whenever a device is attached.
-Compare the model, transport and capacity before choosing a device:
+WSL で専用カードを挿し、その**ディスク全体**を特定します。`/dev/sdX` は例の名前で、
+装置をつなぐたびに変わることがあります。型番、接続方式、容量を見比べてから選びます。
 
 ```sh
 lsblk -o NAME,PATH,SIZE,MODEL,TRAN,RM,TYPE,MOUNTPOINTS
 ```
 
-Set `device` to the confirmed whole disk (TYPE `disk`), not a partition such
-as `/dev/sdX1`. Verify that no partition on it is mounted. Unmount any mounted
-partitions individually before proceeding. Do not accept a name solely because
-it matched a previous session.
+`device` には、確認したディスク全体（TYPE が `disk`）を設定します。`/dev/sdX1` のような
+区画ではありません。その区画がどれもマウントされていないことを確かめ、マウントされて
+いれば一つずつ解除してから進みます。前回の作業で同じ名前だったというだけで選ばないで
+ください。
 
-## Back up, write and verify
+## 保存、書込み、照合
 
-These commands are templates to run in a WSL/Linux shell after replacing the
-device path and image path. Inspect the output of `lsblk` and confirm the
-device is the removable card before running any command that writes to it.
-Run both blocks in the same shell. The checks stop the shell if they fail.
-The backup command reads only the first RP07-sized region of the card.
+以下のコマンドは、装置とイメージのパスを書き換えて WSL/Linux のシェルで実行する
+ひな形です。`lsblk` の表示を見て、装置が取り外せるカードであることを確かめてから、
+書込みをするコマンドを実行します。二つのブロックは同じシェルで実行してください。
+検査に失敗するとシェルが止まります。保存のコマンドは、カードの先頭の RP07 の大きさの
+範囲だけを読みます。
 
 ```sh
 set -euo pipefail
@@ -117,10 +116,9 @@ printf '%s  %s\n' "$expected" "$image" | sha256sum -c -
 lsblk -o NAME,PATH,SIZE,MODEL,TRAN,RM,TYPE,MOUNTPOINTS "$device"
 ```
 
-Stop here if the model or capacity is unexpected, any partition is mounted,
-or the disk contains data you need. Save a backup outside the card, then write
-the image. The backup command also provides a recovery copy of the first
-516,096,000 bytes:
+型番や容量が想定と違う、区画がマウントされている、必要なデータがカードにある、の
+いずれかならここで止めます。カード以外の場所に保存してから、イメージを書きます。
+保存したファイルは、先頭 516,096,000 バイトを元に戻すための控えにもなります。
 
 ```sh
 sudo dd if="$device" of=card-before-rp07.img bs=512 count=1008000 iflag=fullblock status=progress
@@ -131,20 +129,18 @@ sudo blockdev --flushbufs "$device"
 sudo dd if="$device" bs=512 count=1008000 iflag=fullblock status=none | sha256sum
 ```
 
-The final hash must equal `expected`. If the readback hash differs, do not
-boot from the card; investigate the reader, card, and device selection.
-Safely detach the reader before removing the card. On Windows, use
-`usbipd detach --busid <READER-BUSID>`; if the device was shared only for this
-operation, an Administrator PowerShell can then run
-`usbipd unbind --busid <READER-BUSID>`. Check `usbipd list` afterward.
+最後のハッシュは `expected` と一致しなければなりません。読戻しのハッシュが違う場合は
+そのカードから起動せず、リーダー、カード、装置の選択を調べます。カードを抜く前に
+リーダーを安全に切り離します。Windows では `usbipd detach --busid <READER-BUSID>` を
+実行し、この作業のためだけに共有した場合は、管理者の PowerShell で
+`usbipd unbind --busid <READER-BUSID>` を実行します。最後に `usbipd list` で確認します。
 
-On 2026-10-04 the image above was written the same way (`dd` from WSL 2
-through a USB card reader, `conv=fsync`, then a readback of the first
-516,096,000 bytes); the readback hash matched and the card booted on the
-board. That write used `bs=1M` and skipped the backup step. Repeat the
-readback check for every new card.
+2026-10-04 に、上のイメージを同じ方法（WSL 2 から USB カードリーダー経由で `dd`、
+`conv=fsync`、その後に先頭 516,096,000 バイトを読戻し）で書きました。読戻しのハッシュは
+一致し、カードは基板で起動しました。このときは `bs=1M` を使い、保存の手順は省きました。
+新しいカードでは毎回、読戻しの確認をしてください。
 
-After inserting a verified card into the Pmod MicroSD on JD, follow the
-[standalone boot instructions](README.en.md#os-media-and-boot). On 2026-10-13 the
-same unlabeled card also booted to multi-user `login:` with the label-select
-bitstream.
+確認したカードを JD の Pmod MicroSD に挿したら、
+[単体動作版の起動手順](README.md#os-の媒体と起動)に従います。2026-10-13 には、同じ
+ラベルなしのカードがラベル選択版の回路データでもマルチユーザーの `login:` まで
+起動しました。

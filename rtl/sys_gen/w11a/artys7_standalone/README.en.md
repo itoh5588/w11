@@ -97,7 +97,7 @@ Use a dedicated card and verify the target device before writing any image.
   2.11BSD patch level 481 distribution tape only, with a kernel rebuilt for
   `FPSIM YES` because w11 has no FP11. It is used without a label. The image
   is not stored in the repository; the build steps, hashes and SD card
-  writing procedure are in [SD_CARD.md](SD_CARD.md). An image built the same
+  writing procedure are in [SD_CARD.en.md](SD_CARD.en.md). An image built the same
   way is attached to
   [Release book-v1](https://github.com/itoh5588/w11/releases/tag/book-v1).
 - **Unix V6 on RK05.** Pack the three RK05 volumes as described in
