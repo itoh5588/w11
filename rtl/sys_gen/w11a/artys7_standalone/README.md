@@ -1,37 +1,41 @@
-# Arty S7-50 standalone w11 (RP07, RK05, RL01/RL02)
+# Arty S7-50 単体動作版 w11（RP07、RK05、RL01/RL02）
 
-This directory adds a standalone PDP-11/70 configuration to W. F. J. Müller's
-[w11](https://github.com/wfjm/w11). The fork starts from upstream commit
-`4b16e761`. The CPU and DDR3 memory controller come from w11; the additions
-provide native RH70/RP07, RK11/RK05 and RL11/RL01/RL02 controllers for a raw
-microSD card, DMA, a local DL11 console, and a bootstrap that starts after
-FPGA configuration. The normal OS path uses no PC I/O backend. The repository
-is licensed under `GPL-3.0-or-later`, as is the upstream project.
+日本語 | [English](README.en.md)
 
-One bitstream, `sys_w11a_sa_as7`, serves all three disk types. It reads a
-label in block 0 of the card and selects the controller from it; a card
-without a label is an RP07 card. See [Select the disk](#select-the-disk).
+このディレクトリは、W. F. J. Müller 氏の [w11](https://github.com/wfjm/w11) に
+PDP-11/70 の単体動作構成を加えるものです。フォークは公開元のコミット `4b16e761`
+から始めています。CPU と DDR3 主記憶制御は w11 のもので、次のものを加えています。
 
-## Hardware and tested configuration
+- microSD カードを直接ディスクとして使う RH70/RP07、RK11/RK05、RL11/RL01/RL02 の制御回路と DMA
+- 基板のピンにつないだ端末で使う DL11 コンソール
+- FPGA の構成が終わると起動を始める起動回路
 
-- Digilent Arty S7-50 (XC7S50) with its onboard DDR3L memory.
-- Digilent Pmod MicroSD (410-380) on JD.
-- A **3.3 V TTL** serial adapter on JC: JC1 is FPGA TX to adapter RX, JC2 is
-  FPGA RX from adapter TX, and JC5 is ground. Set the terminal to 9600 8N1.
-- BTN3 reads the card label again and restarts the bootstrap.
-- SW3 = 1 gives the on-board USB-UART to an optional front panel instead of
-  rlink (see [Front panel](#front-panel)). Leave SW3 = 0 for normal use.
-- Vivado 2022.1 was used for the recorded builds and hardware tests. The
-  system clock is 75 MHz.
+通常の OS の起動と運用には、PC の I/O バックエンドを使いません。リポジトリのライセンスは、
+公開元と同じ `GPL-3.0-or-later` です。
 
-The original w11 Arty S7 design in `../artys7/` uses a PC backend. The
-standalone top level is `sys_w11a_sa_as7`; keep those two builds distinct.
+一本の回路データ `sys_w11a_sa_as7` で三種類のディスクを扱います。カードのブロック 0 の
+ラベルを読んで制御回路を選び、ラベルのないカードは RP07 として扱います。
+[ディスクを選ぶ](#ディスクを選ぶ)を参照してください。
 
-## Build and load the FPGA
+## ハードウェアと試験した構成
 
-From the repository root, set the w11 build environment. `XTWV_PATH` is the
-Vivado directory containing `settings64.sh`; see [w11 installation notes](../../../../doc/INSTALL.md)
-for prerequisites.
+- Digilent Arty S7-50（XC7S50）と、基板上の DDR3L 主記憶。
+- JD に挿した Digilent Pmod MicroSD（410-380）。
+- JC につないだ **3.3 V TTL** のシリアル変換器。JC1 は FPGA の送信で変換器の RX へ、
+  JC2 は FPGA の受信で変換器の TX から、JC5 は GND です。端末は 9600 8N1 に設定します。
+- BTN3 はカードのラベルを読み直し、起動をやり直します。
+- SW3 = 1 にすると、基板の USB-UART を rlink ではなく、追加のフロントパネルに使います
+  （[フロントパネル](#フロントパネル)を参照）。通常は SW3 = 0 にします。
+- 記録したビルドと実機試験には Vivado 2022.1 を使いました。システムクロックは 75 MHz です。
+
+公開元の Arty S7 版（`../artys7/`）は PC のバックエンドを使います。単体動作版の
+最上位は `sys_w11a_sa_as7` です。二つのビルドを混同しないでください。
+
+## FPGA をビルドして構成する
+
+リポジトリの最上位で w11 のビルド環境を設定します。`XTWV_PATH` は `settings64.sh`
+のある Vivado のディレクトリです。必要なものは [w11 の導入手順](../../../../doc/INSTALL.md)
+（英語）を参照してください。
 
 ```sh
 export RETROBASE="$PWD"
@@ -41,106 +45,97 @@ cd "$RETROBASE/rtl/sys_gen/w11a/artys7_standalone"
 make sys_w11a_sa_as7.bit
 ```
 
-Read the Vivado implementation timing report
-(`sys_w11a_sa_as7_rou_tim.rpt`) before loading the bitstream. Do not use a
-build with timing violations. The 2026-10-13 build of this revision reported
-WNS `+0.078 ns` and WHS `+0.025 ns`; that small margin is a result for that
-build, not a guarantee for another run.
+回路データを使う前に、Vivado の実装のタイミング報告（`sys_w11a_sa_as7_rou_tim.rpt`）を
+確認します。タイミング違反のあるビルドは使いません。この版の 2026-10-13 のビルドは
+WNS `+0.078 ns`、WHS `+0.025 ns` でした。この小さな余裕はそのビルドの結果であり、
+別のビルドで同じになるとは限りません。
 
-After connecting the board's JTAG USB interface, load the verified bitstream:
+基板の JTAG 用 USB をつないでから、確認した回路データを送ります。
 
 ```sh
 make sys_w11a_sa_as7.vconfig
 ```
 
-JTAG configures volatile FPGA memory. It does not write the configuration
-flash; removing power restores whichever image is stored in flash. To boot at
-power-on, convert the bitstream to an MCS file (`write_cfgmem -format mcs
--size 16 -interface SPIx1`) and program it with the Vivado Hardware Manager.
-The tested board has a Micron MT25QL128 (`mt25ql128-spi-x1_x2_x4`); check the
-part on your board.
+JTAG で構成するのは FPGA の揮発性のメモリで、構成用フラッシュには書きません。
+電源を切ると、フラッシュにある回路データに戻ります。電源投入で起動させるには、
+回路データを MCS ファイルに変換し（`write_cfgmem -format mcs -size 16 -interface SPIx1`）、
+Vivado の Hardware Manager でフラッシュに書き込みます。試験した基板のフラッシュは
+Micron MT25QL128（`mt25ql128-spi-x1_x2_x4`）でした。お使いの基板の部品を確認してください。
 
-## Select the disk
+## ディスクを選ぶ
 
-At configuration and on BTN3, the FPGA reads block 0 of the microSD card and
-looks for a card label written by
-[tools/oskit/sd_label.py](../../../../tools/oskit/sd_label.py):
+構成時と BTN3 を押したとき、FPGA は microSD のブロック 0 を読み、
+[tools/oskit/sd_label.py](../../../../tools/oskit/sd_label.py) が書くラベルを探します。
 
-| Label type | Controller | Bootstrap | Typical system |
+| ラベルの種類 | 制御回路 | 起動時の表示 | 主な OS |
 | --- | --- | --- | --- |
-| none | RH70/RP07, disk at LBA 0 | `70Boot from xp(0,0,0)` | 2.11BSD |
-| `rp07` | RH70/RP07, disk at the label's LBA | as above | 2.11BSD |
-| `rk05` | RK11/RK05 | `@` | Unix V6 |
-| `rl` | RL11/RL01/RL02, RL02 and present masks from the label | RL0 | 2.11BSD on RL02 |
+| なし | RH70/RP07、ディスクは LBA 0 から | `70Boot from xp(0,0,0)` | 2.11BSD |
+| `rp07` | RH70/RP07、ディスクはラベルの示す LBA から | 同上 | 2.11BSD |
+| `rk05` | RK11/RK05 | `@` | 第6版 UNIX |
+| `rl` | RL11/RL01/RL02、RL02 と装着の指定はラベルから | RL0 | RL02 上の 2.11BSD |
 
-A missing label, a label with another version or type, or a card that cannot
-be read selects RP07 at LBA 0, so existing 2.11BSD RP07 cards work unchanged.
-The two controllers that were not selected stay in reset and do not answer on
-the ibus; 2.11BSD reports them as `No CSR`. A labeled card has its disk data
-after the label, at LBA 2048 by default. The label layout and the commands
-are described in [the oskit overview](../../../../tools/oskit/README.md).
+ラベルがない、版や種類が違う、カードを読めない場合は、LBA 0 からの RP07 を選びます。
+そのため、既存の 2.11BSD の RP07 カードはそのまま使えます。選ばれなかった二つの
+制御回路はリセットのままで ibus に応答せず、2.11BSD は `No CSR` と表示します。
+ラベル付きのカードでは、ディスクのデータはラベルの後、既定では LBA 2048 から置きます。
+ラベルの形式とコマンドは [oskit の概要](../../../../tools/oskit/README.md)（英語）にあります。
 
-BTN3 probes the card again and restarts the bootstrap, so a card can be
-exchanged without a new FPGA configuration. Halt the running system before
-removing a card.
+BTN3 はカードを調べ直して起動をやり直すので、FPGA を構成し直さずにカードを
+交換できます。カードを抜く前に、動いている OS を停止してください。
 
-## OS media and boot
+## OS の媒体と起動
 
-The controllers treat the card as a **raw disk image**, not as a FAT file.
-Use a dedicated card and verify the target device before writing any image.
+制御回路はカードを FAT のファイルではなく、**raw のディスクイメージ**として扱います。
+専用のカードを使い、イメージを書く前に書込み先の装置を必ず確かめてください。
 
-- **2.11BSD on RP07.** The RP07 geometry is 630 cylinders, 32 tracks per
-  cylinder, 50 sectors per track and 512 bytes per sector: 1,008,000 sectors
-  or 516,096,000 bytes. The tested image is built in SimH from the TUHS
-  2.11BSD patch level 481 distribution tape only, with a kernel rebuilt for
-  `FPSIM YES` because w11 has no FP11. It is used without a label. The image
-  is not distributed here; the build steps, hashes and SD card writing
-  procedure are in [SD_CARD.md](SD_CARD.md).
-- **Unix V6 on RK05.** Pack the three RK05 volumes as described in
-  [u6ed_rk](../../../../tools/oskit/u6ed_rk/README.md), then add a label with
-  `sd_label.py --type rk05`.
-- **RL01/RL02.** The card layout is described in
-  [rl_sd](../../../../tools/oskit/rl_sd/README.md); add a label with
-  `sd_label.py --type rl` and the RL02 and present masks.
+- **RP07 上の 2.11BSD。** RP07 の形は 630 シリンダ、1 シリンダあたり 32 トラック、
+  1 トラックあたり 50 セクタ、1 セクタ 512 バイトで、1,008,000 セクタ、
+  516,096,000 バイトです。試験したイメージは、TUHS の 2.11BSD パッチレベル 481 の
+  配布テープだけから SimH で作り、w11 に FP11 がないため `FPSIM YES` で
+  カーネルを作り直したものです。ラベルなしで使います。作り方、ハッシュ、
+  カードへの書き方は [SD_CARD.md](SD_CARD.md)（英語）にあります。同じ手順で作った
+  イメージは [Release book-v1](https://github.com/itoh5588/w11/releases/tag/book-v1)
+  で配布しています。
+- **RK05 上の第6版 UNIX。** [u6ed_rk](../../../../tools/oskit/u6ed_rk/README.md)（英語）
+  の説明に従って三台の RK05 をまとめ、`sd_label.py --type rk05` でラベルを付けます。
+- **RL01/RL02。** カード上の配置は [rl_sd](../../../../tools/oskit/rl_sd/README.md)（英語）
+  にあります。`sd_label.py --type rl` と RL02・装着の指定でラベルを付けます。
 
-With an unlabeled 2.11BSD card inserted, the bootstrap displays
-`70Boot from xp(0,0,0)` about two seconds after FPGA configuration and boots
-`unix` after a short countdown (press Enter to boot at once). The system
-checks its file systems and continues to multi-user `login:`; log in as
-`root` (no password). To stop, run `sync; sync; halt` and wait for `halting`
-before resetting or removing power.
+ラベルのない 2.11BSD のカードを挿しておくと、FPGA の構成から約 2 秒後に起動回路が
+`70Boot from xp(0,0,0)` を表示し、短いカウントダウンの後に `unix` を起動します
+（Enter ですぐに起動します）。ファイルシステムを検査してからマルチユーザーの
+`login:` に進むので、`root`（パスワードなし）でログインします。止めるときは
+`sync; sync; halt` を実行し、`halting` の表示を待ってからリセットや電源断をします。
 
-With a labeled RK05 card, the V6 bootstrap prints `@`; enter `unix` to reach
-`login:`.
+ラベル付きの RK05 のカードでは、V6 の起動回路が `@` を表示します。`unix` と入力すると
+`login:` に進みます。
 
-## Hardware test status
+## 実機試験の状況
 
-| Date | Bitstream | Card | Result |
+| 日付 | 回路データ | カード | 結果 |
 | --- | --- | --- | --- |
-| 2026-09-27 | RP07-only build, JTAG | earlier 2.11BSD RP07 image | file writes, `halt`, reboot, `fsck -n` and `sum` readback |
-| 2026-10-04 | RP07-only build | 2.11BSD RP07 from the TUHS tape | multi-user `login:` and `halt` |
-| 2026-10-13 | this revision, JTAG | 2.11BSD RP07, unlabeled | multi-user `login:`; RK11 and RL11 reported as `No CSR` |
-| 2026-10-13 | this revision, JTAG | Unix V6 RK05, labeled | `@unix` reached `login:` |
-| 2026-10-13 | this revision, flash | — | programmed and verified; `DONE` after `boot_hw_device` |
-| 2026-10-15 | this revision, flash | 2.11BSD RP07, unlabeled | file writes to `/` and `/usr`, `halt`, BTN3 reboot, `cmp` and `sum` readback, single-user `fsck -n` on `rxp0a` and `rxp0c` without errors |
-| 2026-10-15 | this revision, flash | Unix V6 RK05, labeled | cold power-on to `login:`; file writes to RK0 and RK1, `sync`, BTN3 reboot, `cmp` and `sum` readback; `icheck`/`dcheck` clean on RK1 and RK2 |
-| 2026-10-16 | this revision, flash | both cards | card exchange with BTN3 only, V6 to 2.11BSD and 2.11BSD to V6 |
-| 2026-10-16 | this revision, flash | 2.11BSD RP07, unlabeled | cold power-on to multi-user `login:` with no button pressed |
+| 2026-09-27 | RP07 単独版、JTAG | 以前の 2.11BSD RP07 イメージ | ファイルの書込み、`halt`、再起動、`fsck -n` と `sum` による読戻し |
+| 2026-10-04 | RP07 単独版 | TUHS テープから作った 2.11BSD RP07 | マルチユーザーの `login:` と `halt` |
+| 2026-10-13 | この版、JTAG | 2.11BSD RP07、ラベルなし | マルチユーザーの `login:`。RK11 と RL11 は `No CSR` |
+| 2026-10-13 | この版、JTAG | 第6版 UNIX RK05、ラベル付き | `@unix` で `login:` に到達 |
+| 2026-10-13 | この版、フラッシュ | — | 書込みと照合。`boot_hw_device` の後に `DONE` |
+| 2026-10-15 | この版、フラッシュ | 2.11BSD RP07、ラベルなし | `/` と `/usr` へのファイルの書込み、`halt`、BTN3 で再起動、`cmp` と `sum` による読戻し、シングルユーザーでの `rxp0a` と `rxp0c` の `fsck -n` がエラーなし |
+| 2026-10-15 | この版、フラッシュ | 第6版 UNIX RK05、ラベル付き | 電源投入から `login:`。RK0 と RK1 へのファイルの書込み、`sync`、BTN3 で再起動、`cmp` と `sum` による読戻し。RK1 と RK2 の `icheck`/`dcheck` は異常なし |
+| 2026-10-16 | この版、フラッシュ | 両方のカード | BTN3 だけでのカード交換。V6 から 2.11BSD、2.11BSD から V6 |
+| 2026-10-16 | この版、フラッシュ | 2.11BSD RP07、ラベルなし | ボタンを押さずに電源投入からマルチユーザーの `login:` |
 
-On the V6 RK0 volume, `icheck` reports block 2683 as a duplicate and 11
-missing blocks, and `dcheck` reports link count mismatches. The same
-findings are already in `u6ed_rk0.dsk` from the SimH kit, before any
-hardware run; RK0 has not been repaired.
+V6 の RK0 では、`icheck` がブロック 2683 の重複と 11 個の欠落ブロックを、`dcheck` が
+リンク数の不一致を報告します。これらは実機で動かす前の SimH キットの `u6ed_rk0.dsk`
+にすでにあるもので、RK0 は修復していません。
 
-Not yet tested with this revision: any RL card on hardware.
+この版でまだ試験していないもの：RL のカードの実機での動作。
 
-## Front panel
+## フロントパネル
 
-With SW3 = 1, the on-board USB-UART (115200 bps) is connected to a PDP-11/70
-front panel drawn in the browser by [tcode/panel.html](tcode/panel.html)
-(Web Serial). It provides HALT, LOAD ADRS, EXAM/DEP, CONT and START, and
-shows the address, data and status lamps. The panel is not needed to boot or
-run an OS.
+SW3 = 1 のとき、基板の USB-UART（115200 bps）は、[tcode/panel.html](tcode/panel.html)
+がブラウザに描く PDP-11/70 のフロントパネル（Web Serial）につながります。
+HALT、LOAD ADRS、EXAM/DEP、CONT、START の操作ができ、アドレス、データ、状態の
+ランプを表示します。OS の起動と運用にパネルは必要ありません。
 
-Implementation details and test evidence for the RP07 path are in
-[the design notes](../../../../Docs/artys7_standalone_rp07_design.md).
+RP07 の経路の実装と試験の記録は [設計メモ](../../../../Docs/artys7_standalone_rp07_design.md)
+（日本語）にあります。

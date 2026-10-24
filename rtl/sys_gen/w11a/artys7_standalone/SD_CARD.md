@@ -7,7 +7,7 @@ dedicated card with at least that capacity. The first 516,096,000 bytes of the
 card will be overwritten.
 
 The standalone bitstream also accepts RK05 and RL cards, selected by a card
-label in block 0 (see [Select the disk](README.md#select-the-disk)). An RP07
+label in block 0 (see [Select the disk](README.en.md#select-the-disk)). An RP07
 card needs **no label**: a card without one is read as an RP07 disk from
 sector 0. This page writes the 2.11BSD image that way. If you label an RP07
 image with `tools/oskit/sd_label.py --type rp07`, the disk data moves to
@@ -145,6 +145,6 @@ board. That write used `bs=1M` and skipped the backup step. Repeat the
 readback check for every new card.
 
 After inserting a verified card into the Pmod MicroSD on JD, follow the
-[standalone boot instructions](README.md#os-media-and-boot). On 2026-10-13 the
+[standalone boot instructions](README.en.md#os-media-and-boot). On 2026-10-13 the
 same unlabeled card also booted to multi-user `login:` with the label-select
 bitstream.
