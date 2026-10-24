@@ -1,103 +1,98 @@
-# w11: PDP 11/70 CPU and SoC
+# w11: PDP-11/70 CPU と SoC — Arty S7 単体動作版
 
-[![ci](https://github.com/wfjm/w11/workflows/ci/badge.svg)](https://github.com/wfjm/w11/actions/workflows/ci.yml)
-[![Coverity Status](https://scan.coverity.com/projects/16546/badge.svg?flat=1)](https://scan.coverity.com/projects/wfjm-w11)
-[![Commits since latest release](https://img.shields.io/github/commits-since/wfjm/w11/latest.svg?longCache=true)](https://github.com/wfjm/w11/releases)
+日本語 | [English](README.en.md)
 
-### Overview
-The project contains the VHDL code for a **complete DEC PDP-11 system**:
-a
-[PDP-11/70](http://www.bitsavers.org/pdf/dec/pdp11/1170/EK-KB11C-TM-001_1170procMan.pdf)
-CPU with a memory management unit, but without a floating point unit,
-a complete set of mass storage peripherals
-([RK11/RK05](http://www.bitsavers.org/pdf/dec/unibus/RK11-C_manual1971.pdf),
-[RL11/RL02](http://www.bitsavers.org/pdf/dec/disc/rl01_rl02/EK-RL122-TM-001_techAug82.pdf),
-[RH70](http://www.bitsavers.org/pdf/dec/unibus/CSS-MO-F-5.2-27_RH70_Option_Description_Feb77.pdf)/[RP06](http://www.bitsavers.org/pdf/dec/disc/rp04_rp05_rp06/EK-RP056-MM-01_maint_Dec75.pdf),
-[TM11/TU10](http://www.bitsavers.org/pdf/dec/magtape/tm11/TM11_Manual.pdf))
-and a rather complete set of UNIBUS peripherals
-([DL11](http://www.bitsavers.org/pdf/dec/unibus/EK-DL11-TM-003_DL11_Asynchronous_Line_Interface_Manual_Sep75.pdf),
-[LP11](http://www.bitsavers.org/pdf/dec/unibus/LP11_UsersMan.pdf),
-[PC11](http://www.bitsavers.org/pdf/dec/unibus/PC11_Reader-Punch_Manual.pdf),
-[DZ11](http://www.bitsavers.org/pdf/dec/unibus/EK-DZ110-TM-002_DZ11_Asynchronous_Multiplexer_Technical_Manual_Oct78.pdf), and
-[DEUNA](http://www.bitsavers.org/pdf/dec/unibus/EK-DEUNA-TM-PRE_TechMan_Dec82.pdf)),
-and last but not least a cache and memory controllers for SRAM, PSRAM and
-SDRAM (via Xilinx MIG core).
-The design is **FPGA proven**, runs currently on Digilent
-[Arty A7](rtl/sys_gen/w11a/arty/README.md),
-[Basys3](rtl/sys_gen/w11a/basys3/README.md),
-[Cmod A7](rtl/sys_gen/w11a/cmoda7/README.md),
-[Nexys A7](rtl/sys_gen/w11a/nexys4d/README.md),
-[Nexys4](rtl/sys_gen/w11a/nexys4/README.md),
-[Nexys3](rtl/sys_gen/w11a/nexys3/README.md),
-[Nexys2](rtl/sys_gen/w11a/nexys2/README.md) and
-[S3board](rtl/sys_gen/w11a/s3board/README.md)
-boards and boots 5th Edition UNIX, 2.11BSD UNIX, as well as various DEC
-operating systems from provided [oskits](tools/oskit/README.md).
+このリポジトリは、W. F. J. Müller 氏の [w11](https://github.com/wfjm/w11) を
+Digilent Arty S7-50 の上で PC なしに動かすためのフォークです。w11 の CPU と
+DDR3 主記憶制御を土台に、次のものを加えています。
 
-The current implementation forwards the IO requests from all devices via a
-fast serial connection to a backend server on a PC, which translates these
-requests and maps them to contemporary interfaces.
-True standalone systems are on the project roadmap in the upstream project.
+- microSD カードを直接読み書きする RP07、RK05、RL01/RL02 のディスク制御回路
+- 基板のピンにつないだシリアル端末で使う DL11 コンソール
+- FPGA の構成が終わると自動で OS を起動する起動回路
 
-### Arty S7 standalone fork
+一本の回路データ（`.bit`）で三種類のディスクを扱います。カードの先頭ブロックの
+ラベルでディスクの種類を選び、ラベルのないカードは RP07 として扱います。
+2.11BSD と第6版 UNIX（V6）を、PC の I/O バックエンドなしで起動できます。
 
-This fork adds native RP07, RK05 and RL01/RL02 disk controllers, a local DL11
-console and an autostart bootstrap for the Arty S7-50. One bitstream selects
-the disk from a label on the microSD card, so the FPGA can boot 2.11BSD or
-Unix V6 from a raw card without the PC I/O backend. See the
-[standalone build and operating notes](rtl/sys_gen/w11a/artys7_standalone/README.md).
-The operating-system image used for development is not included.
+![Pmod MicroSD とシリアル端末の配線をした Arty S7-50](doc/images/IMG_0050.jpg)
 
-![Arty S7-50 standalone setup with a Pmod MicroSD card and serial console wiring](doc/images/IMG_0050.jpg)
+*右上の Pmod MicroSD に、2.11BSD のディスクイメージを書いた microSD カードが入っています。*
 
-*The Pmod MicroSD module at the upper right holds the microSD card containing the 2.11BSD disk image.*
+単体動作版で 2.11BSD を起動した端末の画面です。
 
-A 2.11BSD console session on the standalone setup:
+![Tera Term に 2.11BSD の W11TAPE カーネルと login: が表示されている](doc/images/2.11bsd-console-login.png)
 
-![Tera Term showing the 2.11BSD W11TAPE kernel and login prompt on COM5](doc/images/2.11bsd-console-login.png)
+## すぐに試す
 
-For more information look into:
-- w11 project [home page](https://wfjm.github.io/home/w11/), especially the
-  sections on [feature set](https://wfjm.github.io/home/w11/impl/) and
-  [overall architecture](https://wfjm.github.io/home/w11/impl/architecture.html).
-- w11 project [blog](https://wfjm.github.io/blogs/w11/).
-- [change log](doc/CHANGELOG.md)
-  and [installation notes](doc/INSTALL.md).
-- guides to build bit files and test benches
-  with [Xilinx Vivado](doc/README_buildsystem_Vivado.md)
-  and [Xilinx ISE](doc/README_buildsystem_ISE.md).
-- guides to [run test benches](doc/w11a_tb_guide.md)
-  and to [boot operating systems](doc/w11a_os_guide.md).
-- known [issues](doc/README_known_issues.md).
-- known [differences](doc/w11a_known_differences.md).
-- the impatient readers can try their luck with the
-  [quick start guide](doc/INSTALL_quickstart.md).
+[Release book-v1](https://github.com/itoh5588/w11/releases/tag/book-v1) に、
+ビルド済みの回路データと microSD 用のイメージを置いています。どれも SHA-256 の
+値を添えています。
 
-A short description of the directory layout
-[is provided separately](https://wfjm.github.io/home/w11/impl/dirlayout.html),
-the top-level directories are
+| ファイル | 内容 |
+| --- | --- |
+| `sys_w11a_sa_as7.bit` | Arty S7-50 用の回路データ |
+| `rp07_w11_tape481_fpsim.img.xz` | 2.11BSD（パッチ 481、FPSIM 入り）の RP07 イメージ |
+| `v6_rk_card_labeled.img.xz` | 第6版 UNIX の RK05 イメージ（ラベル付き） |
+| `CALDERA-LICENSE.txt` | V6 イメージに適用されるライセンス |
 
-| Directory | Content |
-| --------- | ------- |
-| [doc](doc)     | documentation |
-| [rtl](rtl)     | HDL sources (mostly VHDL) |
-| [tools](tools) | many tools |
+2.11BSD のイメージは、TUHS で公開されている配布テープから作ったものです。
 
-### Note on freecores/w11
-The [freecores team](http://freecores.github.io/) created in 2014 a
-copy of almost all OpenCores cores in Github under
-[freecores](https://github.com/freecores). This created
-[freecores/w11](https://github.com/freecores/w11)
-which is 
-[*outdated* and *not maintained*](https://github.com/freecores/w11/issues/1).
-***Only [wfjm/w11](https://github.com/wfjm/w11) is maintained***.
+## 書籍のコマンド集
 
-### License
-This project is released under the 
-[GPL V3 license](https://www.gnu.org/licenses/gpl-3.0.html),
-all files contain an [SPDX](https://spdx.org/)-style disclaimer:
+[book-scripts](book-scripts/) には、書籍の本文にあるコマンドを節ごとに切り出した
+PowerShell・sh・Tcl のスクリプトがあります。一覧と、それぞれを実行する場所は
+[book-scripts/README.md](book-scripts/README.md) にあります。
+
+## 資料
+
+- [単体動作版のビルドと操作の手引き](rtl/sys_gen/w11a/artys7_standalone/README.md)（英語）：
+  ハードウェアの構成、ビルド、ディスクの選び方、フロントパネル
+- [SD_CARD.md](rtl/sys_gen/w11a/artys7_standalone/SD_CARD.md)（英語）：
+  microSD イメージの作り方と配置
+- [RP07 設計メモ](Docs/artys7_standalone_rp07_design.md)（日本語）：
+  装置レジスタ、ディスクと SD の対応、試験の記録
+
+## 公開元の w11 について
+
+w11 は、DEC PDP-11 システムを丸ごと VHDL で記述したプロジェクトです。
+メモリ管理装置付きの PDP-11/70 CPU、RK11/RK05・RL11/RL02・RH70/RP06・TM11/TU10
+といった大容量記憶装置、DL11・LP11・PC11・DZ11・DEUNA などの UNIBUS 周辺装置、
+キャッシュと SRAM・PSRAM・SDRAM の主記憶制御を含みます。Digilent の Arty A7、
+Basys3、Cmod A7、Nexys A7 などの基板で動作し、第5版 UNIX、2.11BSD、DEC の各種 OS を
+起動できます。
+
+公開元の構成では、すべての装置の入出力を高速シリアルで PC 上のサーバーへ送り、
+PC 側で現在の装置に対応付けています。このフォークは、その入出力を基板の上で
+処理する単体動作版です。
+
+公開元の詳しい資料は英語です。
+
+- w11 プロジェクトの[ホームページ](https://wfjm.github.io/home/w11/)と
+  [ブログ](https://wfjm.github.io/blogs/w11/)
+- [変更履歴](doc/CHANGELOG.md)と[導入手順](doc/INSTALL.md)
+- [Vivado でのビルド](doc/README_buildsystem_Vivado.md)、
+  [テストベンチの実行](doc/w11a_tb_guide.md)、[OS の起動](doc/w11a_os_guide.md)
+- 英語版の README は [README.en.md](README.en.md) です。
+
+保守されている公開元は [wfjm/w11](https://github.com/wfjm/w11) だけです。
+[freecores/w11](https://github.com/freecores/w11) は古い複製で、保守されていません。
+
+## ディレクトリ
+
+| ディレクトリ | 内容 |
+| --- | --- |
+| [book-scripts](book-scripts) | 書籍のコマンド集 |
+| [doc](doc) | 公開元の資料 |
+| [Docs](Docs) | 単体動作版の設計メモ |
+| [rtl](rtl) | HDL のソース（主に VHDL） |
+| [tools](tools) | 各種ツール |
+
+## ライセンス
+
+公開元と同じく [GPL V3](https://www.gnu.org/licenses/gpl-3.0.html) で公開しています。
+各ファイルには [SPDX](https://spdx.org/) 形式の表示があります。
 
     SPDX-License-Identifier: GPL-3.0-or-later
 
-The full text of the GPL license is in this directory as
-[License.txt](License.txt).
+ライセンスの全文はこのディレクトリの [License.txt](License.txt) にあります。
+V6 のイメージは GPL ではなく、Release に添付した `CALDERA-LICENSE.txt` に従います。
