@@ -1,5 +1,6 @@
 -- SPDX-License-Identifier: GPL-3.0-or-later
--- RL01/RL02 unit type, get status, read/write and drive isolation.
+-- RL01/RL02 unit type, get status, read/write and drive isolation,
+-- and DMA through the UNIBUS map (ubmap_shadow) across a map page.
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
@@ -36,6 +37,8 @@ architecture sim of tb_ibdr_rl02n is
   signal DMA_DI, DMA_DO : slv32 := (others => '0');
   signal SDERR : slv8 := (others => '0');
   signal XCOUNT : slv16 := (others => '0');
+  signal UB_ENA : slbit := '0';
+  signal UB_TAB : slv(32*21-1 downto 0) := (others => '0');
   constant rlcs : natural := 8#174400#;
   constant rlba : natural := 8#174402#;
   constant rlda : natural := 8#174404#;
@@ -64,7 +67,12 @@ begin
       DMA_REQ => DMA_REQ, DMA_WE => DMA_WE, DMA_BUSY => DMA_BUSY,
       DMA_ACK_R => DMA_ACK_R, DMA_ACK_W => DMA_ACK_W,
       DMA_ADDR => DMA_ADDR, DMA_BE => DMA_BE, DMA_DI => DMA_DI,
-      DMA_DO => DMA_DO, SDERR => SDERR, XCOUNT => XCOUNT);
+      DMA_DO => DMA_DO, UB_ENA => UB_ENA, UB_TAB => UB_TAB,
+      SDERR => SDERR, XCOUNT => XCOUNT);
+
+  UBMAP: entity work.ubmap_shadow
+    port map (CLK => CLK, BRESET => BRESET, IB_MREQ => IB_MREQ,
+              ENA => UB_ENA, TAB => UB_TAB);
 
   CARD: entity work.sdcard_spi_model
     port map (MODE => 1, CS_N => CS_N, SCLK => SCLK,
@@ -120,6 +128,20 @@ begin
       IB_MREQ <= ib_mreq_init;
     end procedure;
 
+    -- a write that no device in this bench answers (UNIBUS map, MMR3)
+    procedure ib_poke(constant addr : natural; constant data : natural) is
+    begin
+      wait until falling_edge(CLK);
+      IB_MREQ.aval <= '1';
+      IB_MREQ.addr <= slv(to_unsigned(addr mod 8192, 13)(12 downto 1));
+      IB_MREQ.din <= slv(to_unsigned(data, 16));
+      IB_MREQ.be0 <= '1'; IB_MREQ.be1 <= '1';
+      wait until falling_edge(CLK);
+      IB_MREQ.we <= '1';
+      wait until falling_edge(CLK);
+      IB_MREQ <= ib_mreq_init;
+    end procedure;
+
     procedure ib_read(constant addr : natural; variable data : out slv16) is
     begin
       wait until falling_edge(CLK);
@@ -158,6 +180,7 @@ begin
     end function;
 
     variable d : slv16;
+    variable pa : natural;
   begin
     wait for 100 ns;
     wait until falling_edge(CLK); RESET <= '0';
@@ -245,6 +268,52 @@ begin
     ib_read(rlcs, d);
     assert d(15) = '1' and d(14) = '1'
       report "absent RL2 status" severity failure;
+    -- UNIBUS map: page 0 -> 040002 (not 4-byte aligned), page 1 -> 100002,
+    -- then 100000. The UNIBUS buffer 017700 holds 32 words in page 0 and 96
+    -- in page 1. The last word of page 0 is a low half; the first of page 1
+    -- is a high half (a lone low and a lone high write), then a low half (a
+    -- lone low write).
+    ib_poke(8#170200#, 8#040002#);
+    ib_poke(8#170202#, 0);
+    ib_poke(8#170206#, 0);
+    ib_poke(8#172516#, 8#000040#);       -- MMR3: enable the UNIBUS map
+    assert UB_ENA = '1' report "UNIBUS map not enabled" severity failure;
+    for pass in 0 to 1 loop
+      ib_poke(8#170204#, 8#100002# - 2*pass);
+      ib_write(rlda, 0);
+      ib_write(rlba, 8#017700#);
+      ib_write(rlmp, 8#177600#);
+      ib_write(rlcs, 8#000014#);         -- RL0 READ through the map
+      wait_rdy;
+      ib_read(rlcs, d);
+      assert d(15) = '0' report "mapped READ error" severity failure;
+      for i in 0 to 127 loop
+        if i < 32 then pa := 8#040002# + 8#017700# + i*2;
+        else pa := 8#100002# - 2*pass + (i-32)*2; end if;
+        assert memword(pa) = block_byte(0, i*2+1) & block_byte(0, i*2)
+          report "mapped READ pass " & integer'image(pass) &
+                 " word " & integer'image(i) severity failure;
+      end loop;
+    end loop;
+    ib_write(rlda, 1);                   -- RL1 sector 1 from the same buffer
+    ib_write(rlba, 8#017700#);
+    ib_write(rlmp, 8#177600#);
+    ib_write(rlcs, 8#000412#);
+    wait_rdy;
+    ib_read(rlcs, d);
+    assert d(15) = '0' report "mapped WRITE error" severity failure;
+    ib_poke(8#172516#, 0);               -- map off, read back unmapped
+    assert UB_ENA = '0' report "UNIBUS map not disabled" severity failure;
+    ib_write(rlda, 1);
+    ib_write(rlba, 8#012000#);
+    ib_write(rlmp, 8#177600#);
+    ib_write(rlcs, 8#000414#);
+    wait_rdy;
+    for i in 0 to 127 loop
+      assert memword(8#012000# + i*2) =
+             block_byte(0, i*2+1) & block_byte(0, i*2)
+        report "mapped WRITE word " & integer'image(i) severity failure;
+    end loop;
     report "tb_ibdr_rl02n: PASS";
     DONE <= true;
     wait;

@@ -26,6 +26,7 @@ w11_panel.vbom
 w11_cpu_dma_path.vbom
 w11_dma_pingpong.vbom
 ibdr_rp07n.vbom
+ubmap_shadow.vbom
 ibdr_rk05n.vbom
 ibdr_rl02n.vbom
 ibd_dl11n.vbom

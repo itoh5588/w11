@@ -205,6 +205,8 @@ architecture syn of sys_w11a_sa_as7 is
     di : slv32;
   end record sd_dma_type;
   type sd_dma_array is array (0 to 2) of sd_dma_type;
+  signal UB_ENA    : slbit := '0';       -- UNIBUS map copy for RK/RL DMA
+  signal UB_TAB    : slv(32*21-1 downto 0) := (others=>'0');
   signal SD_DMA    : sd_dma_array :=
     (others=>('0', '0', (others=>'0'), (others=>'0'), (others=>'0')));
   signal IB_SRES_RK : ib_sres_type := ib_sres_init;
@@ -623,6 +625,15 @@ begin
       XCOUNT      => open
     );
 
+  UBMAP : entity work.ubmap_shadow       -- UNIBUS map for RK/RL DMA ------
+    port map (
+      CLK         => CLK,
+      BRESET      => BRESET,
+      IB_MREQ     => IB_MREQ,
+      ENA         => UB_ENA,
+      TAB         => UB_TAB
+    );
+
   RK05 : entity work.ibdr_rk05n           -- native RK11/RK05 on microSD --
     generic map (
       WRITE_ENABLE => true)
@@ -650,6 +661,8 @@ begin
       DMA_BE      => SD_DMA(1).be,
       DMA_DI      => SD_DMA(1).di,
       DMA_DO      => DMA_DO,
+      UB_ENA      => UB_ENA,
+      UB_TAB      => UB_TAB,
       SDERR       => open,
       XCOUNT      => open
     );
@@ -683,6 +696,8 @@ begin
       DMA_BE       => SD_DMA(2).be,
       DMA_DI       => SD_DMA(2).di,
       DMA_DO       => DMA_DO,
+      UB_ENA       => UB_ENA,
+      UB_TAB       => UB_TAB,
       SDERR        => open,
       XCOUNT       => open
     );

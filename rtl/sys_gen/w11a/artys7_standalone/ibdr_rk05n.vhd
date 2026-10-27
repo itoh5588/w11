@@ -40,6 +40,8 @@ entity ibdr_rk05n is
     DMA_BE : out slv4;
     DMA_DI : out slv32;
     DMA_DO : in slv32;
+    UB_ENA : in slbit := '0';           -- UNIBUS map enable (ubmap_shadow)
+    UB_TAB : in slv(32*21-1 downto 0) := (others => '0'); -- UNIBUS map
     SDERR : out slv8;
     XCOUNT : out slv16
   );
@@ -167,7 +169,8 @@ begin
   WR : entity work.sd_dma_wr
     port map (
       CLK => CLK, RESET => ENGINE_RESET, START => WR_START,
-      BASE => WR_BASE, FLUSH => WR_FLUSH, WE => WR_WE,
+      BASE => WR_BASE, UB_ENA => UB_ENA, UB_TAB => UB_TAB,
+      FLUSH => WR_FLUSH, WE => WR_WE,
       DI => SD_WDATA, HOLD => WR_HOLD, IDLE => WR_IDLE, NWORD => open,
       DMA_REQ => WR_DMA_REQ, DMA_WE => WR_DMA_WE, DMA_BUSY => DMA_BUSY,
       DMA_ACK_W => DMA_ACK_W, DMA_ADDR => WR_DMA_ADDR,
@@ -176,7 +179,8 @@ begin
   RD : entity work.sd_dma_rd
     port map (
       CLK => CLK, RESET => ENGINE_RESET, START => RD_START,
-      BASE => WR_BASE, NWORD => slv(R.xfer), DONE => RD_DONE,
+      BASE => WR_BASE, UB_ENA => UB_ENA, UB_TAB => UB_TAB,
+      NWORD => slv(R.xfer), DONE => RD_DONE,
       RADDR => SD_WBUF_ADDR, RDATA => SD_WBUF_DATA,
       DMA_REQ => RD_DMA_REQ, DMA_BUSY => DMA_BUSY,
       DMA_ACK_R => DMA_ACK_R, DMA_ADDR => RD_DMA_ADDR, DMA_DO => DMA_DO);
