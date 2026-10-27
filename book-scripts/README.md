@@ -61,7 +61,7 @@ powershell -ExecutionPolicy Bypass -File .\Chapter03-1-download-bit.ps1
 | `AppendixD-2-get-kit.sh` | 付録D キットを入手する |
 | `AppendixD-3-fix-ttys.sh` | 付録D 端末の設定を直す |
 | `AppendixD-4-make-card-image.sh` | 付録D カード用のイメージにする |
-| `AppendixE-1-make-card-image.sh` | 付録E イメージを作る（実機未確認） |
+| `AppendixE-1-make-card-image.sh` | 付録E イメージを作る |
 
 付録Dのカードは、イメージを二つ目の引数で渡して書く。次の `/dev/sdX` は例の名前で、
 そのままでは拒否される。第4章の手順で `lsblk` を使って確かめた実際の装置名

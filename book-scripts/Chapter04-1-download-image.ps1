@@ -2,7 +2,7 @@
 # 実行場所: PowerShell。最後に True と表示されればハッシュが一致している。
 mkdir "$HOME\w11-media"
 cd "$HOME\w11-media"
-$BASE = "https://github.com/itoh5588/w11/releases/download/book-v1"
+$BASE = "https://github.com/itoh5588/w11/releases/download/book-v2"
 curl.exe -fLO "$BASE/rp07_w11_tape481_fpsim.img.xz"
 curl.exe -fLO "$BASE/rp07_w11_tape481_fpsim.img.xz.sha256"
 $want = (Get-Content rp07_w11_tape481_fpsim.img.xz.sha256).Split(" ")[0]

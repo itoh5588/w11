@@ -7,7 +7,7 @@
 cd "$HOME"
 git clone https://github.com/itoh5588/w11.git w11-standalone
 cd w11-standalone
-git checkout --detach d6b5022b412a79ec205ed1d1932fd839bdaf4c85
+git checkout --detach b935933427af18def5804802fa2a7d95e7f81fa5
 git rev-parse HEAD
 
 export RETROBASE="$PWD"

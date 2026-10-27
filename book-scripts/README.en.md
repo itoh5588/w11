@@ -66,7 +66,7 @@ powershell -ExecutionPolicy Bypass -File .\Chapter03-1-download-bit.ps1
 | `AppendixD-2-get-kit.sh` | App. D, get the kit |
 | `AppendixD-3-fix-ttys.sh` | App. D, fix the terminal settings |
 | `AppendixD-4-make-card-image.sh` | App. D, make the card image |
-| `AppendixE-1-make-card-image.sh` | App. E, make the image (not tested on hardware) |
+| `AppendixE-1-make-card-image.sh` | App. E, make the image |
 
 To write the Appendix D card, pass the image as the second argument.
 `/dev/sdX` below is an example name and is refused as is. Replace it with the

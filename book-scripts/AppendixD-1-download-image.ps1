@@ -3,7 +3,7 @@
 # カードへの書込みは第4章と同じく balenaEtcher で行う。
 mkdir "$HOME\v6-card"
 cd "$HOME\v6-card"
-$BASE = "https://github.com/itoh5588/w11/releases/download/book-v1"
+$BASE = "https://github.com/itoh5588/w11/releases/download/book-v2"
 curl.exe -fLO "$BASE/v6_rk_card_labeled.img.xz"
 curl.exe -fLO "$BASE/v6_rk_card_labeled.img.xz.sha256"
 curl.exe -fLO "$BASE/CALDERA-LICENSE.txt"
