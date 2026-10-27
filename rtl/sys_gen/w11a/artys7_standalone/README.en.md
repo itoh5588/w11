@@ -130,13 +130,22 @@ With a labeled RK05 card, the V6 bootstrap prints `@`; enter `unix` to reach
 | 2026-10-15 | this revision, flash | Unix V6 RK05, labeled | cold power-on to `login:`; file writes to RK0 and RK1, `sync`, BTN3 reboot, `cmp` and `sum` readback; `icheck`/`dcheck` clean on RK1 and RK2 |
 | 2026-10-16 | this revision, flash | both cards | card exchange with BTN3 only, V6 to 2.11BSD and 2.11BSD to V6 |
 | 2026-10-16 | this revision, flash | 2.11BSD RP07, unlabeled | cold power-on to multi-user `login:` with no button pressed |
+| 2026-10-27 | `a5cf236d`, flash | 2.11BSD on two RL02, labeled | `rl(0,0,0)unix` loaded, then the kernel could not read its disk label and stopped with `panic: swsiz` |
+| 2026-10-27 | `1d4abbff`, JTAG | 2.11BSD on two RL02, labeled | multi-user `login:`; writes to `/` and `/usr`, `halt`, readback with `cmp` and `sum` after reconfiguration |
+| 2026-10-27 | `1d4abbff`, JTAG | 2.11BSD RP07, unlabeled | writes to `/` and `/usr`, `halt`; clean boot after reconfiguration, `cmp` and `sum` match |
+| 2026-10-27 | `1d4abbff`, JTAG | Unix V6 RK05, labeled | `@unix` reached `login:`; write to RK0, `sync`, `cmp` readback after reconfiguration |
 
 On the V6 RK0 volume, `icheck` reports block 2683 as a duplicate and 11
 missing blocks, and `dcheck` reports link count mismatches. The same
 findings are already in `u6ed_rk0.dsk` from the SimH kit, before any
 hardware run; RK0 has not been repaired.
 
-Not yet tested with this revision: any RL card on hardware.
+"This revision" in the table is `a5cf236d`, the circuit of Release book-v1.
+Its RK11 and RL11 did not translate DMA addresses through the UNIBUS map.
+The 11/70 2.11BSD kernel uses the map, so an RL card stops during boot. In
+`1d4abbff`, `ubmap_shadow` keeps a copy of the map registers and MMR3, and
+the RK11 and RL11 DMA is translated through it. RH70/RP07 uses 22-bit DMA
+and is unchanged.
 
 ## Front panel
 

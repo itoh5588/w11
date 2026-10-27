@@ -52,7 +52,7 @@ python3 tools/oskit/pack_rl_sd.py 211bsd-rl-card.img \
 ```
 
 The default RTL mask declares all four drives RL02 and present. For a card
-packed as above, set `RL02_MASK` to `"0001"` and `PRESENT_MASK` to `"0011"`
+packed as above, set `RL02_MASK` to `"0011"` and `PRESENT_MASK` to `"0011"`
 on `sys_w11a_sa_rl_as7`. Bit 0 corresponds to RL0. The type mask in the
 bitstream must agree with the input image type; the packer does not configure
 the FPGA. An RL01 image can also occupy an RL02 drive slot, but software will
@@ -60,8 +60,11 @@ see an RL02 drive.
 
 The controller and packer have been checked in simulation. The Arty S7
 standalone RL variant completed placement and routing with setup slack
-+0.046 ns and hold slack +0.030 ns in Vivado 2022.1. Physical card behavior
-and operating-system boot have not yet been verified.
++0.046 ns and hold slack +0.030 ns in Vivado 2022.1. On hardware, the
+single `sys_w11a_sa_as7` bitstream from commit `1d4abbff` boots this card to
+multi-user `login:` and reads and writes both drives (2026-10-27). Earlier
+builds did not translate RL11 DMA through the UNIBUS map, and the 2.11BSD
+kernel stopped with `panic: swsiz`.
 The generated `sys_w11a_sa_rl_as7.bit` in the standalone RTL directory uses
 the default masks (all four drives present and RL02). This build has SHA-256
 `f2b8a7c5d47a397455058eeb262e22d561f9529835b6b36665a66f31080300fe`.
