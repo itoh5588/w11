@@ -68,8 +68,13 @@ powershell -ExecutionPolicy Bypass -File .\Chapter03-1-download-bit.ps1
 | `AppendixD-4-make-card-image.sh` | App. D, make the card image |
 | `AppendixE-1-make-card-image.sh` | App. E, make the image (not tested on hardware) |
 
-To write the Appendix D card, pass the image as the second argument, for
-example `./Chapter04-9-write-card.sh /dev/sdX $HOME/v6-card/v6_rk_card_labeled.img`.
+To write the Appendix D card, pass the image as the second argument.
+`/dev/sdX` below is an example name and is refused as is. Replace it with the
+actual device name you confirmed with `lsblk` in Chapter 4 (e.g. `/dev/sdb`).
+
+```sh
+./Chapter04-9-write-card.sh /dev/sdX $HOME/v6-card/v6_rk_card_labeled.img
+```
 
 The interactive steps are not scripts: the disklabel and boot `:` input in
 Chapter 4, the editing with V6 `ed` in Appendix D, and the examples in

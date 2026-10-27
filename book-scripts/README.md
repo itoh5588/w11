@@ -63,8 +63,13 @@ powershell -ExecutionPolicy Bypass -File .\Chapter03-1-download-bit.ps1
 | `AppendixD-4-make-card-image.sh` | 付録D カード用のイメージにする |
 | `AppendixE-1-make-card-image.sh` | 付録E イメージを作る（実機未確認） |
 
-付録Dのカードは `./Chapter04-9-write-card.sh /dev/sdX $HOME/v6-card/v6_rk_card_labeled.img`
-のように、イメージを二つ目の引数で渡して書く。
+付録Dのカードは、イメージを二つ目の引数で渡して書く。次の `/dev/sdX` は例の名前で、
+そのままでは拒否される。第4章の手順で `lsblk` を使って確かめた実際の装置名
+（例: `/dev/sdb`）に置き換える。
+
+```sh
+./Chapter04-9-write-card.sh /dev/sdX $HOME/v6-card/v6_rk_card_labeled.img
+```
 
 disklabel やブートの `:` での入力（第4章）、V6 の `ed` による編集（付録D）、
 第8章の操作例は対話なので、スクリプトにしていない。本文に従って入力する。
