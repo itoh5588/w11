@@ -14,6 +14,8 @@ set cpu 11/70
 set cpu 4M
 set cpu fpp
 set rp0 rp07
+set tm disabled
+set ts enabled
 attach rp0 rp07-build.img
 attach -r ts0 2.11BSD-481-simh-dist.tap
 boot ts0

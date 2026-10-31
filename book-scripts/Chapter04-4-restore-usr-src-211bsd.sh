@@ -4,7 +4,9 @@
 # 一行ずつ入力するか、端末に貼り付けて使う。
 cd /dev
 ./MAKEDEV xp0
+rm -f mt* rmt*
 ./MAKEDEV ts0
+ls -l rmt12
 newfs xp0c
 mount /dev/xp0c /usr
 cd /usr
