@@ -12,6 +12,9 @@ book, with these additions:
 - `Chapter04-9-write-card.sh`, which writes the card, stops if a partition is
   mounted, a backup file already exists or the card is too small, and writes
   nothing until you type `yes`.
+- `AppendixD-2-get-kit.sh`, which gets the V6 kit, stops if `kit` or a
+  `disk*.rk` already exists in `$HOME/v6-card`, so that disks in use are not
+  overwritten.
 - `XTWV_PATH`, `RETROBASE` and `W11` keep their values if they are already set.
 
 The comments in the scripts are in Japanese.
